@@ -96,40 +96,15 @@ from rapidfuzz import fuzz
 
 def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> tuple:
     """
-    Обрабатывает фрагмент, заменяя локальные ссылки на глобальные номера.
-    Убирает дубликаты номеров — сохраняется только один глобальный.
+    Обрабатывает фрагмент, заменяя локальные ссылки в квадратных скобках
+    на глобальную нумерацию с учётом повторений и fuzzy-совпадений.
     """
-    from rapidfuzz import fuzz
     local_refs_dict = frag['refs']
     refs_list = list(local_refs_dict.values())
     local_text_map = {}
     new_id = 1
     threshold = 90
 
-    def find_existing_ref(new_ref_text):
-        for known_text in global_ref_map:
-            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
-                return known_text
-        return None
-
-    def replace_cite(match):
-        nonlocal new_id
-        raw_num = int(match.group(1))
-        if raw_num < 1 or raw_num > len(refs_list):
-            return '[??]'
-        ref_text = refs_list[raw_num - 1]
-
-        existing_ref = find_existing_ref(ref_text)
-        if existing_ref:
-            ref_text = existing_ref  # заменим на существующий текст
-        else:
-            global_ref_map[ref_text] = current_index[0]
-            current_index[0] += 1
-
-        return f'[{global_ref_map[ref_text]}]'
-
-    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
-    return frag_text, global_ref_map, current_index
     def find_existing_ref(new_ref_text):
         for known_text in global_ref_map:
             if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
@@ -351,30 +326,19 @@ def main():
     
     if submitted and new_text_input.strip() and new_refs_input.strip():
         cleaned_refs = parse_references(new_refs_input.strip())
-
-        # ВАЛИДАЦИЯ ссылок в тексте против списка литературы
-        cited_numbers = set(int(n) for n in re.findall(r"\[(\d+)\]", new_text_input))
-        available_numbers = set(cleaned_refs.keys())
-
-        missing_refs = sorted(cited_numbers - available_numbers)
-        extra_refs = sorted(available_numbers - cited_numbers)
-
-        if missing_refs:
-            st.error(f"⚠️ В тексте есть ссылки, которых нет в списке литературы: {missing_refs}")
-        elif extra_refs:
-            st.warning(f"⚠️ В списке литературы есть неиспользованные ссылки: {extra_refs}")
-
-        if not missing_refs:
-            fragment = {
-                "text": new_text_input.strip(),
-                "refs": cleaned_refs
-            }
-            if st.session_state.edit_index is not None:
-                st.session_state.fragments[st.session_state.edit_index] = fragment
-                st.session_state.edit_index = None
-            else:
-                st.session_state.fragments.append(fragment)
-            update_autosave()
+        fragment = {
+            "text": new_text_input.strip(),
+            "refs": cleaned_refs
+        }
+        if st.session_state.edit_index is not None:
+            st.session_state.fragments[st.session_state.edit_index] = fragment
+            st.session_state.edit_index = None
+        else:
+            st.session_state.fragments.append(fragment)
+        update_autosave()
+    #########################################
+    # Просмотр добавленных фрагментов с возможностью редактирования и удаления
+    #########################################
     st.subheader("📋 Добавленные фрагменты")
     for idx, frag in enumerate(st.session_state.fragments):
         with st.expander(f"Фрагмент {idx + 1}", expanded=False):
@@ -419,12 +383,13 @@ def main():
         new_refs = []
         global_ref_map = {}
         current_index = [st.session_state.get("start_index", 1)]
-
         all_issues = []
 
         for frag_idx, frag in enumerate(st.session_state.fragments):
             cited_numbers = set(int(n) for n in re.findall(r"\[(\d+)\]", frag["text"]))
-            available_numbers = set(frag["refs"].keys())
+            # Приведение ключей к int (если str)
+            available_numbers = set(int(k) for k in frag["refs"].keys())
+
             missing = sorted(cited_numbers - available_numbers)
             extra = sorted(available_numbers - cited_numbers)
 
@@ -432,7 +397,6 @@ def main():
                 all_issues.append(f"⚠️ Фрагмент {frag_idx+1}: ссылки в тексте, которых нет в списке — {missing}")
 
             frag_text, global_ref_map, current_index = process_fragment(frag, global_ref_map, current_index)
-            # Подсветим [??] красным цветом
             frag_text = re.sub(r"\[\?\?\]", ":red[??]", frag_text)
             new_text += frag_text + "\n\n"
 
