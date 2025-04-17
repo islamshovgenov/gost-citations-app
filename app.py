@@ -274,6 +274,7 @@ def main():
     projects_files = [p for p in os.listdir(PROJECT_DIR) if p.endswith(".json")]
     chosen_file = st.sidebar.selectbox("Выбрать проект из списка", ["—"] + projects_files)
     if chosen_file != "—":
+    st.session_state["last_opened_project"] = chosen_file  # Запоминаем последний проект
         project_name = chosen_file.replace(".json", "")
     else:
         project_name = st.sidebar.text_input("Или ввести название проекта вручную", value="default")
@@ -343,6 +344,18 @@ def main():
     st.session_state.start_index = st.sidebar.number_input("Начальный номер глобальной нумерации", min_value=1, value=1)
     st.sidebar.markdown("---")
     
+    # Автовосстановление последнего проекта
+    if "last_opened_project" in st.session_state and st.session_state["last_opened_project"].endswith(".json"):
+        default_project = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
+        if os.path.exists(default_project):
+            data = load_project(default_project)
+            st.session_state.fragments = data.get("fragments", [])
+            st.session_state.ref_map = data.get("ref_map", {})
+            st.session_state.ref_counter = data.get("ref_counter", 1)
+            st.session_state.final_text = data.get("final_text", "")
+            st.session_state.final_refs = data.get("final_refs", [])
+            st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
+
     # Восстановление автосохранения
     restore_autosave()
     
@@ -471,6 +484,7 @@ def main():
 
         st.subheader("📄 Объединённый текст")
         st.code(new_text, language="markdown")
+        st.subheader("📚 Общий список литературы")
         for ref in new_refs:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
