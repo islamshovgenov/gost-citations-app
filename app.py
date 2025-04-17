@@ -1,3 +1,75 @@
+
+import requests
+import base64
+
+# === GitHub интеграция ===
+
+def load_project_from_github(filename):
+    if "github_token" not in st.session_state or "github_username" not in st.session_state:
+        st.warning("Не введён GitHub токен или имя пользователя.")
+        return None
+
+    url = f"https://api.github.com/repos/islamshovgenov/gost-citations-app/contents/saved_projects/{filename}"
+    headers = {
+        "Authorization": f"token {st.session_state.github_token}",
+        "Accept": "application/vnd.github.v3.raw"
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json() if isinstance(response.json(), dict) else json.loads(response.text)
+    else:
+        st.error(f"Ошибка загрузки из GitHub: {response.status_code}")
+        return None
+
+
+def save_project_to_github(filename, data_dict):
+    import json
+    from datetime import datetime
+
+    if "github_token" not in st.session_state or "github_username" not in st.session_state:
+        st.warning("Не введён GitHub токен или имя пользователя.")
+        return
+
+    url = f"https://api.github.com/repos/islamshovgenov/gost-citations-app/contents/saved_projects/{filename}"
+    headers = {
+        "Authorization": f"token {st.session_state.github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Сначала получим SHA, если файл уже есть
+    get_resp = requests.get(url, headers=headers)
+    sha = None
+    if get_resp.status_code == 200:
+        sha = get_resp.json().get("sha")
+
+    content = base64.b64encode(json.dumps(data_dict, ensure_ascii=False, indent=2).encode()).decode("utf-8")
+
+    payload = {
+        "message": f"Автосохранение {filename} [{datetime.now()}]",
+        "content": content,
+        "branch": "main",
+    }
+    if sha:
+        payload["sha"] = sha
+
+    put_resp = requests.put(url, headers=headers, json=payload)
+    if put_resp.status_code in [200, 201]:
+        st.success("✅ Успешно сохранено на GitHub")
+    else:
+        st.error(f"Ошибка сохранения в GitHub: {put_resp.status_code}")
+
+
+# ==== Ввод GitHub данных ====
+if "github_token" not in st.session_state:
+    st.session_state.github_token = st.text_input("Введите GitHub токен", type="password")
+if "github_username" not in st.session_state:
+    st.session_state.github_username = st.text_input("Введите имя пользователя GitHub")
+
+if st.session_state.github_token and st.session_state.github_username:
+    st.info("GitHub данные сохранены в сессии.")
+
+
 import sys
 import streamlit as st
 import re
