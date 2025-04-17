@@ -192,15 +192,15 @@ def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> t
 #########################################
 def init_session_state():
     if 'fragments' not in st.session_state:
-        st.session_state.fragments = []
+        st.session_state[f"{user_id}_fragments"] = []
     if 'ref_map' not in st.session_state:
-        st.session_state.ref_map = {}
+        st.session_state[f"{user_id}_ref_map"] = {}
     if 'ref_counter' not in st.session_state:
-        st.session_state.ref_counter = 1
+        st.session_state[f"{user_id}_ref_counter"] = 1
     if 'final_text' not in st.session_state:
-        st.session_state.final_text = ""
+        st.session_state[f"{user_id}_final_text"] = ""
     if 'final_refs' not in st.session_state:
-        st.session_state.final_refs = []
+        st.session_state[f"{user_id}_final_refs"] = []
     if 'edit_index' not in st.session_state:
         st.session_state.edit_index = None
     if 'start_index' not in st.session_state:
@@ -212,11 +212,11 @@ def restore_autosave():
             try:
                 with open(AUTOSAVE_FILE, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    st.session_state.fragments = data.get("fragments", [])
-                    st.session_state.ref_map = data.get("ref_map", {})
-                    st.session_state.ref_counter = data.get("ref_counter", 1)
-                    st.session_state.final_text = data.get("final_text", "")
-                    st.session_state.final_refs = data.get("final_refs", [])
+                    st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
+                    st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
+                    st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
+                    st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
+                    st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
                 st.success("✅ Автоматически восстановлен последний проект")
             except Exception as e:
                 st.warning(f"Ошибка при восстановлении: {e}")
@@ -244,6 +244,7 @@ def main():
 
     # Панель управления проектами
     st.sidebar.title("📁 Управление проектами")
+    user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     projects_files = [p for p in os.listdir(PROJECT_DIR) if p.endswith(".json")]
     chosen_file = st.sidebar.selectbox("Выбрать проект из списка", ["—"] + projects_files)
     if chosen_file != "—":
@@ -267,11 +268,11 @@ def main():
     if st.sidebar.button("📂 Загрузить проект"):
         if os.path.exists(project_path):
             data = load_project(project_path)
-            st.session_state.fragments = data.get("fragments", [])
-            st.session_state.ref_map = data.get("ref_map", {})
-            st.session_state.ref_counter = data.get("ref_counter", 1)
-            st.session_state.final_text = data.get("final_text", "")
-            st.session_state.final_refs = data.get("final_refs", [])
+            st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
+            st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
+            st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
+            st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
+            st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
             st.sidebar.success(f"Проект '{project_name}' загружен")
         else:
             st.sidebar.error("Файл проекта не найден")
@@ -287,11 +288,11 @@ def main():
     if uploaded_file is not None:
         try:
             data = json.load(uploaded_file)
-            st.session_state.fragments = data.get("fragments", [])
-            st.session_state.ref_map = data.get("ref_map", {})
-            st.session_state.ref_counter = data.get("ref_counter", 1)
-            st.session_state.final_text = data.get("final_text", "")
-            st.session_state.final_refs = data.get("final_refs", [])
+            st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
+            st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
+            st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
+            st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
+            st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
             st.sidebar.success("Проект импортирован из файла")
         except Exception as e:
             st.sidebar.error(f"Ошибка при импорте: {e}")
@@ -320,8 +321,8 @@ def main():
     restore_autosave()
     
     # Статистика по проекту
-    st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state.fragments)}")
-    st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state.final_refs)}")
+    st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
+    st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
     
     # Инструкция для пользователя
     st.markdown("""
@@ -339,7 +340,7 @@ def main():
         default_text = ""
         default_refs = ""
         if st.session_state.edit_index is not None:
-            frag = st.session_state.fragments[st.session_state.edit_index]
+            frag = st.session_state[f"{user_id}_fragments"][st.session_state.edit_index]
             default_text = frag["text"]
             if isinstance(frag.get("refs"), dict):
                 default_refs = "\n\n".join(f"{k}. {v}" for k, v in frag["refs"].items())
@@ -358,16 +359,16 @@ def main():
             "refs": cleaned_refs
         }
         if st.session_state.edit_index is not None:
-            st.session_state.fragments[st.session_state.edit_index] = fragment
+            st.session_state[f"{user_id}_fragments"][st.session_state.edit_index] = fragment
             st.session_state.edit_index = None
         else:
-            st.session_state.fragments.append(fragment)
+            st.session_state[f"{user_id}_fragments"].append(fragment)
         update_autosave()
     #########################################
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
     #########################################
     st.subheader("📋 Добавленные фрагменты")
-    for idx, frag in enumerate(st.session_state.fragments):
+    for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
         with st.expander(f"Фрагмент {idx + 1}", expanded=False):
             with st.form(key=f"fragment_form_{idx}"):
                 st.markdown(f"**Текст:**\n{frag['text']}")
@@ -383,14 +384,14 @@ def main():
                 with col1:
                     up = st.form_submit_button("⬆️")
                     if up and idx > 0:
-                        st.session_state.fragments[idx - 1], st.session_state.fragments[idx] = \
-                            st.session_state.fragments[idx], st.session_state.fragments[idx - 1]
+                        st.session_state[f"{user_id}_fragments"][idx - 1], st.session_state[f"{user_id}_fragments"][idx] = \
+                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx - 1]
                         st.rerun()
                 with col2:
                     down = st.form_submit_button("⬇️")
-                    if down and idx < len(st.session_state.fragments) - 1:
-                        st.session_state.fragments[idx + 1], st.session_state.fragments[idx] = \
-                            st.session_state.fragments[idx], st.session_state.fragments[idx + 1]
+                    if down and idx < len(st.session_state[f"{user_id}_fragments"]) - 1:
+                        st.session_state[f"{user_id}_fragments"][idx + 1], st.session_state[f"{user_id}_fragments"][idx] = \
+                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx + 1]
                         st.rerun()
                 with col3:
                     edit_button = st.form_submit_button("✏️ Редактировать")
@@ -400,7 +401,7 @@ def main():
                 with col4:
                     delete_button = st.form_submit_button("🗑 Удалить")
                     if delete_button:
-                        st.session_state.fragments.pop(idx)
+                        st.session_state[f"{user_id}_fragments"].pop(idx)
                         st.rerun()
     #########################################
     # Объединение фрагментов и формирование итогового текста и списка литературы
@@ -412,7 +413,7 @@ def main():
         current_index = [st.session_state.get("start_index", 1)]
         all_issues = []
 
-        for frag_idx, frag in enumerate(st.session_state.fragments):
+        for frag_idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
             cited_numbers = set(int(n) for n in re.findall(r"\[(\d+)\]", frag["text"]))
             # Приведение ключей к int (если str)
             available_numbers = set(int(k) for k in frag["refs"].keys())
@@ -436,10 +437,10 @@ def main():
         for ref_text, ref_num in sorted_refs:
             new_refs.append(f"[{ref_num}] {ref_text}")
 
-        st.session_state.final_text = new_text
-        st.session_state.final_refs = new_refs
-        st.session_state.ref_map = global_ref_map
-        st.session_state.ref_counter = current_index[0]
+        st.session_state[f"{user_id}_final_text"] = new_text
+        st.session_state[f"{user_id}_final_refs"] = new_refs
+        st.session_state[f"{user_id}_ref_map"] = global_ref_map
+        st.session_state[f"{user_id}_ref_counter"] = current_index[0]
         update_autosave()
 
         st.subheader("📄 Объединённый текст")
@@ -458,13 +459,13 @@ def main():
     #########################################
     # Вывод итогового результата и экспорт в DOCX
     #########################################
-    if st.session_state.final_text:
+    if st.session_state[f"{user_id}_final_text"]:
         st.markdown("---")
         st.subheader("📄 Объединённый текст")
-        st.code(st.session_state.final_text.strip(), language="markdown")
+        st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
     
         st.subheader("📚 Общий список литературы")
-        for ref in st.session_state.final_refs:
+        for ref in st.session_state[f"{user_id}_final_refs"]:
             st.markdown(ref)
     
         if st.button("📥 Скачать DOCX", key="download_docx"):
@@ -477,11 +478,11 @@ def main():
             rFonts.set(qn("w:eastAsia"), "Times New Roman")
     
             doc.add_paragraph("Текст обзора:")
-            for paragraph in st.session_state.final_text.strip().split("\n"):
+            for paragraph in st.session_state[f"{user_id}_final_text"].strip().split("\n"):
                 doc.add_paragraph(paragraph)
     
             doc.add_paragraph("\nСписок литературы:")
-            for ref in st.session_state.final_refs:
+            for ref in st.session_state[f"{user_id}_final_refs"]:
                 doc.add_paragraph(ref)
     
             buffer = BytesIO()
