@@ -262,7 +262,19 @@ def generate_docx(text, references):
     return doc
 
 def main():
-    st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
+
+    # Автоматическая загрузка последнего проекта
+    if "last_opened_project" in st.session_state:
+        last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
+        if os.path.exists(last_proj):
+            data = load_project(last_proj)
+            st.session_state.fragments = data.get("fragments", [])
+            st.session_state.ref_map = data.get("ref_map", {})
+            st.session_state.ref_counter = data.get("ref_counter", 1)
+            st.session_state.final_text = data.get("final_text", "")
+            st.session_state.final_refs = data.get("final_refs", [])
+            st.session_state.restored = True
+        st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
