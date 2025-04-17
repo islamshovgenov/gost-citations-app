@@ -506,5 +506,21 @@ def main():
                 key="download_docx_file"
             )
 
+
+    if st.session_state.get(f"{user_id}_final_text", ""):
+        st.subheader("📤 Экспорт в DOCX")
+        docx = generate_docx(
+            st.session_state.get(f"{user_id}_final_text", ""),
+            st.session_state.get(f"{user_id}_final_refs", [])
+        )
+        buffer = BytesIO()
+        docx.save(buffer)
+        buffer.seek(0)
+        st.download_button(
+            "📥 Скачать DOCX",
+            buffer,
+            file_name="citations.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 if __name__ == "__main__":
     main()
