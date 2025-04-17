@@ -475,8 +475,6 @@ def main():
         for ref in new_refs:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
-        st.subheader("📄 Объединённый текст")
-        st.subheader("📚 Общий список литературы")
         for ref in new_refs:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
@@ -486,10 +484,8 @@ def main():
     #########################################
     if st.session_state[f"{user_id}_final_text"]:
         st.markdown("---")
-        st.subheader("📄 Объединённый текст")
         st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
     
-        st.subheader("📚 Общий список литературы")
         for ref in st.session_state[f"{user_id}_final_refs"]:
             st.markdown(ref)
     
