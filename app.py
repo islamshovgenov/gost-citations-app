@@ -274,7 +274,7 @@ def main():
     projects_files = [p for p in os.listdir(PROJECT_DIR) if p.endswith(".json")]
     chosen_file = st.sidebar.selectbox("Выбрать проект из списка", ["—"] + projects_files)
     if chosen_file != "—":
-    st.session_state["last_opened_project"] = chosen_file  # Запоминаем последний проект
+        st.session_state["last_opened_project"] = chosen_file  # Запоминаем последний проект
         project_name = chosen_file.replace(".json", "")
     else:
         project_name = st.sidebar.text_input("Или ввести название проекта вручную", value="default")
