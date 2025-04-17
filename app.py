@@ -241,7 +241,7 @@ def update_autosave():
     }
     autosave_project(data)
 project_file = os.path.join(PROJECT_DIR, f"{st.session_state.get('last_opened_project', 'autosave.json')}")
-    save_project(project_file, data)
+save_project(project_file, data)
 
 #########################################
 # Основная функция приложения
