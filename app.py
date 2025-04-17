@@ -65,13 +65,13 @@ def save_project(project_path: str, data: dict) -> None:
         logging.error(f"Ошибка сохранения проекта: {e}")
 
 def autosave_project(data: dict, user_id: str) -> None:
-    """Автосохранение проекта в локальный файл."""
+    """Автосохранение проекта в персональный файл."""
+    filename = f"autosave_{user_id}.json"
     try:
-        filename = f"autosave_{user_id}.json"
-    with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logging.error(f"Ошибка автосохранения проекта: {e}")
+        logging.error(f"Ошибка автосохранения проекта для {user_id}: {e}")
 
 #########################################
 # Функция для разбора и очистки списка литературы с помощью spaCy (вариант 2)
