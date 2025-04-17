@@ -1,47 +1,17 @@
 import streamlit as st
-st.set_page_config(layout="wide")
 import os
 import json
 import requests
 
+st.set_page_config(layout="wide")
 
 # Проверка наличия секретов
-if "github_token" in st.secrets and "github_username" in st.secrets and "github_repo" in st.secrets:
-    GITHUB_TOKEN = st.secrets["github_token"]
-    GITHUB_USERNAME = st.secrets["github_username"]
-    GITHUB_REPO = st.secrets["github_repo"]
-    GITHUB_BRANCH = st.secrets.get("github_branch", "main")
 
-    def push_to_github(file_path, repo_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        api_url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{repo_path}"
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
+GITHUB_TOKEN = "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"
+GITHUB_USERNAME = "islamshovgenov"
+GITHUB_REPO = "gost-citations-app"
+GITHUB_BRANCH = "main"
 
-        # Проверяем, существует ли файл
-        res = requests.get(api_url, headers=headers)
-        if res.status_code == 200:
-            sha = res.json()["sha"]
-        else:
-            sha = None
-
-        data = {
-            "message": "auto update from Streamlit app",
-            "content": content.encode("utf-8").decode("utf-8"),
-            "branch": GITHUB_BRANCH
-        }
-        if sha:
-            data["sha"] = sha
-
-        response = requests.put(api_url, headers=headers, json=data)
-        return response.status_code, response.json()
-
-    st.success("GitHub интеграция включена")
-else:
-    st.warning("GitHub токен или имя пользователя не заданы в secrets. Интеграция отключена.")
 
 
 import sys
