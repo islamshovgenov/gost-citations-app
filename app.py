@@ -244,6 +244,23 @@ def update_autosave():
 #########################################
 # Основная функция приложения
 #########################################
+from docx import Document
+from docx.shared import Pt
+
+def generate_docx(text, references):
+    doc = Document()
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(12)
+
+    doc.add_paragraph(text.strip())
+    doc.add_paragraph("\nСписок литературы:")
+    for ref in references:
+        doc.add_paragraph(ref, style='List Number')
+
+    return doc
+
 def main():
     st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
@@ -459,7 +476,6 @@ def main():
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
         st.subheader("📄 Объединённый текст")
-        st.code(new_text, language='markdown')
         st.subheader("📚 Общий список литературы")
         for ref in new_refs:
             st.markdown(ref)
