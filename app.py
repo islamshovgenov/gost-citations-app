@@ -64,10 +64,11 @@ def save_project(project_path: str, data: dict) -> None:
     except Exception as e:
         logging.error(f"Ошибка сохранения проекта: {e}")
 
-def autosave_project(data: dict) -> None:
+def autosave_project(data: dict, user_id: str) -> None:
     """Автосохранение проекта в локальный файл."""
     try:
-        with open(AUTOSAVE_FILE, 'w', encoding='utf-8') as f:
+        filename = f"autosave_{user_id}.json"
+    with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logging.error(f"Ошибка автосохранения проекта: {e}")
@@ -231,11 +232,12 @@ def init_session_state(user_id):
     if 'start_index' not in st.session_state:
         st.session_state.start_index = 1
 
-def restore_autosave():
+def restore_autosave(user_id: str):
     if 'restored' not in st.session_state:
-        if os.path.exists(AUTOSAVE_FILE):
+        filename = f"autosave_{user_id}.json"
+        if os.path.exists(filename):
             try:
-                with open(AUTOSAVE_FILE, 'r', encoding='utf-8') as f:
+                with open(filename, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
                     st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
@@ -247,7 +249,7 @@ def restore_autosave():
                 st.warning(f"Ошибка при восстановлении: {e}")
         st.session_state.restored = True
 
-def update_autosave():
+def update_autosave(user_id: str):
     data = {
         "fragments": st.session_state.get("fragments", []),
         "ref_map": st.session_state.get("ref_map", {}),
@@ -255,7 +257,7 @@ def update_autosave():
         "final_text": st.session_state.get("final_text", ""),
         "final_refs": st.session_state.get("final_refs", [])
     }
-    autosave_project(data)
+    autosave_project(data, user_id)
 
 #########################################
 # Основная функция приложения
@@ -385,7 +387,7 @@ def main():
             st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
 
     # Восстановление автосохранения
-    restore_autosave()
+    restore_autosave(user_id)
     
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
@@ -430,7 +432,7 @@ def main():
             st.session_state.edit_index = None
         else:
             st.session_state[f"{user_id}_fragments"].append(fragment)
-        update_autosave()
+        update_autosave(user_id)
     #########################################
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
     #########################################
@@ -508,7 +510,7 @@ def main():
         st.session_state[f"{user_id}_final_refs"] = new_refs
         st.session_state[f"{user_id}_ref_map"] = global_ref_map
         st.session_state[f"{user_id}_ref_counter"] = current_index[0]
-        update_autosave()
+        update_autosave(user_id)
 
         st.subheader("📄 Объединённый текст")
         st.code(new_text, language="markdown")
