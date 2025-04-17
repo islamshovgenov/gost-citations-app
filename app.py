@@ -190,8 +190,17 @@ def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> t
 #########################################
 # Инициализация переменных сессии
 #########################################
-def init_session_state():
-    if 'fragments' not in st.session_state:
+def init_session_state(user_id):
+    if f"{user_id}_fragments" not in st.session_state:
+        st.session_state[f"{user_id}_fragments"] = []
+    if f"{user_id}_ref_map" not in st.session_state:
+        st.session_state[f"{user_id}_ref_map"] = {}
+    if f"{user_id}_ref_counter" not in st.session_state:
+        st.session_state[f"{user_id}_ref_counter"] = 1
+    if f"{user_id}_final_text" not in st.session_state:
+        st.session_state[f"{user_id}_final_text"] = ""
+    if f"{user_id}_final_refs" not in st.session_state:
+        st.session_state[f"{user_id}_final_refs"] = []
         st.session_state[f"{user_id}_fragments"] = []
     if 'ref_map' not in st.session_state:
         st.session_state[f"{user_id}_ref_map"] = {}
@@ -240,7 +249,7 @@ def main():
     st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
     # Инициализация состояния сессии
-    init_session_state()
+    init_session_state(user_id)
 
     # Панель управления проектами
     st.sidebar.title("📁 Управление проектами")
