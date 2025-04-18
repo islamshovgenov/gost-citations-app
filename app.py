@@ -1,5 +1,4 @@
-```python
-# --- Инициализация состояния сессии ---
+
 
 def init_session_state(uid: str):
     keys = ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']
