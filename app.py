@@ -355,6 +355,7 @@ def main():
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     
     init_session_state(user_id)
+    restore_autosave(user_id)
 
 
     local_data = load_from_localstorage_with_js_eval(user_id)
@@ -483,8 +484,7 @@ if "gost_autoload_data" in st.session_state:
             st.session_state.final_refs = data.get("final_refs", [])
             st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
 
-    # Восстановление автосохранения
-    restore_autosave(user_id)
+
     
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
