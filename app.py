@@ -165,8 +165,8 @@ def parse_references(refs_text: str) -> dict:
 from rapidfuzz import fuzz
 
 
-    def clean_reference(text):
-        return re.sub(r'^\[\d+\]\s*', '', text).strip()
+def clean_reference(text):
+    return re.sub(r'^\[\d+\]\s*', '', text).strip()
 
     def find_existing_ref(new_ref_text, known_refs, threshold=90):
         for known_text in known_refs:
@@ -676,6 +676,45 @@ if "gost_autoload_data" in st.session_state:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
 
+
+
+    """
+    Обрабатывает фрагмент, заменяя локальные ссылки на глобальные номера.
+    Убирает дубликаты номеров и очищает [x] в начале ссылок литературы.
+    """
+    from rapidfuzz import fuzz
+    import re
+
+    def clean_reference(text):
+        return re.sub(r'^\[\d+\]\s*', '', text).strip()
+
+    def find_existing_ref(new_ref_text, known_refs, threshold=90):
+        for known_text in known_refs:
+            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
+                return known_text
+        return None
+
+    local_refs_dict = frag['refs']
+    refs_list = list(local_refs_dict.values())
+
+    def replace_cite(match):
+        raw_num = int(match.group(1))
+        if raw_num < 1 or raw_num > len(refs_list):
+            return '[??]'
+        raw_ref_text = refs_list[raw_num - 1]
+        ref_text = clean_reference(raw_ref_text)
+
+        existing_ref = find_existing_ref(ref_text, global_ref_map)
+        if existing_ref:
+            ref_text = existing_ref
+        else:
+            global_ref_map[ref_text] = current_index[0]
+            current_index[0] += 1
+
+        return f'[{global_ref_map[ref_text]}]'
+
+    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
+    return frag_text, global_ref_map, current_index
 
 
 def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> tuple:
