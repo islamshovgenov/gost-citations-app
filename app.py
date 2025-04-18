@@ -218,14 +218,14 @@ def replace_cite(match):
         return f'[{global_ref_map[ref_text]}]'
 
 frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
-    return frag_text, global_ref_map, current_index
-    def find_existing_ref(new_ref_text):
+        return frag_text, global_ref_map, current_index
+        def find_existing_ref(new_ref_text):
         for known_text in global_ref_map:
             if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
-    def replace_cite(match: re.Match) -> str:
+def replace_cite(match: re.Match) -> str:
         nonlocal new_id
         raw_num = int(match.group(1))
         if raw_num < 1 or raw_num > len(refs_list):
@@ -249,9 +249,9 @@ frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
 
         return f'[{global_ref_map[ref_text]}]'
 
-    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
-    return frag_text, global_ref_map, current_index
-    def replace_cite(match: re.Match) -> str:
+frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
+        return frag_text, global_ref_map, current_index
+def replace_cite(match: re.Match) -> str:
         nonlocal new_id
         raw_num = int(match.group(1))
         # Проверяем, что номер есть в диапазоне ссылок (нумерация в списке начинается с 1)
@@ -272,8 +272,8 @@ frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
             current_index[0] += 1
         return f"[{global_ref_map[ref_text]}]"
 
-    frag_text = re.sub(r"\[(\d+)\]", replace_cite, frag["text"])
-    return frag_text, global_ref_map, current_index
+frag_text = re.sub(r"\[(\d+)\]", replace_cite, frag["text"])
+        return frag_text, global_ref_map, current_index
 #########################################
 # Инициализация переменных сессии
 #########################################
