@@ -92,9 +92,9 @@ AUTOSAVE_FILE = "project_autosave.json"
 os.makedirs(PROJECT_DIR, exist_ok=True)
 
 # Предкомпилированные регулярные выражения (используются в process_fragment и в случае отсутствия spaCy)
-REFS_SPLIT_REGEX = re.compile(
+REFS_SPLIT_REGEX = re.compile()
     r"(?=^\s*(?:\[\d+\]|(?:19|20)\d{2}\.|[A-ZА-ЯЁ][a-zа-яё]+,|\d+\.))", 
-    flags=re.M
+    flags=re.M)
 CITE_REGEX = re.compile(r"\[(\d+)\]")
 
 #########################################
