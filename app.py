@@ -356,11 +356,48 @@ def main():
     init_session_state(user_id)
     restore_autosave(user_id)
     
+    #########################################
+    # Просмотр добавленных фрагментов с возможностью редактирования и удаления
+    #########################################
+    st.subheader("📋 Добавленные фрагменты")
+    for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
+        with st.expander(f"Фрагмент {idx + 1}", expanded=False):
+            with st.form(key=f"fragment_form_{idx}"):
+                st.markdown(f"**Текст:**\n{frag['text']}")
+                st.markdown("**Список литературы:**")
+                if isinstance(frag.get("refs"), dict):
+                    for orig_num, ref_text in frag["refs"].items():
+                        st.markdown(f"{orig_num}. {ref_text}")
+                elif isinstance(frag.get("refs"), list):
+                    for i, ref_text in enumerate(frag["refs"]):
+                        st.markdown(f"{i+1}. {ref_text}")
+
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
+                with col1:
+                    up = st.form_submit_button("⬆️")
+                    if up and idx > 0:
+                        st.session_state[f"{user_id}_fragments"][idx - 1], st.session_state[f"{user_id}_fragments"][idx] = \
+                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx - 1]
+                        st.rerun()
+                with col2:
+                    down = st.form_submit_button("⬇️")
+                    if down and idx < len(st.session_state[f"{user_id}_fragments"]) - 1:
+                        st.session_state[f"{user_id}_fragments"][idx + 1], st.session_state[f"{user_id}_fragments"][idx] = \
+                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx + 1]
+                        st.rerun()
+                with col3:
+                    edit_button = st.form_submit_button("✏️ Редактировать")
+                    if edit_button:
+                        st.session_state.edit_index = idx
+                        st.rerun()
+                with col4:
+                    delete_button = st.form_submit_button("🗑 Удалить")
+                    if delete_button:
+                        st.session_state[f"{user_id}_fragments"].pop(idx)
+                        st.rerun()
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
     st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
-    
-        for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
 
     local_data = load_from_localstorage_with_js_eval(user_id)
     if local_data:
@@ -528,45 +565,6 @@ if "gost_autoload_data" in st.session_state:
         else:
             st.session_state[f"{user_id}_fragments"].append(fragment)
         update_autosave()
-    #########################################
-    # Просмотр добавленных фрагментов с возможностью редактирования и удаления
-    #########################################
-    st.subheader("📋 Добавленные фрагменты")
-
-        with st.expander(f"Фрагмент {idx + 1}", expanded=False):
-            with st.form(key=f"fragment_form_{idx}"):
-                st.markdown(f"**Текст:**\n{frag['text']}")
-                st.markdown("**Список литературы:**")
-                if isinstance(frag.get("refs"), dict):
-                    for orig_num, ref_text in frag["refs"].items():
-                        st.markdown(f"{orig_num}. {ref_text}")
-                elif isinstance(frag.get("refs"), list):
-                    for i, ref_text in enumerate(frag["refs"]):
-                        st.markdown(f"{i+1}. {ref_text}")
-
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
-                with col1:
-                    up = st.form_submit_button("⬆️")
-                    if up and idx > 0:
-                        st.session_state[f"{user_id}_fragments"][idx - 1], st.session_state[f"{user_id}_fragments"][idx] = \
-                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx - 1]
-                        st.rerun()
-                with col2:
-                    down = st.form_submit_button("⬇️")
-                    if down and idx < len(st.session_state[f"{user_id}_fragments"]) - 1:
-                        st.session_state[f"{user_id}_fragments"][idx + 1], st.session_state[f"{user_id}_fragments"][idx] = \
-                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx + 1]
-                        st.rerun()
-                with col3:
-                    edit_button = st.form_submit_button("✏️ Редактировать")
-                    if edit_button:
-                        st.session_state.edit_index = idx
-                        st.rerun()
-                with col4:
-                    delete_button = st.form_submit_button("🗑 Удалить")
-                    if delete_button:
-                        st.session_state[f"{user_id}_fragments"].pop(idx)
-                        st.rerun()
     #########################################
     # Объединение фрагментов и формирование итогового текста и списка литературы
     #########################################
