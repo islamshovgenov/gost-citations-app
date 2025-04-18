@@ -58,7 +58,8 @@ import os
 import json
 import requests
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
+
 
 # Проверка наличия секретов
 
