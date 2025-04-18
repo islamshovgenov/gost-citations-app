@@ -395,6 +395,63 @@ def main():
                     if delete_button:
                         st.session_state[f"{user_id}_fragments"].pop(idx)
                         st.rerun()
+                     
+    #########################################
+    # Вывод итогового результата и экспорт в DOCX
+    #########################################
+    if st.session_state[f"{user_id}_final_text"]:
+        st.markdown("---")
+        st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
+    
+        for ref in st.session_state[f"{user_id}_final_refs"]:
+            st.markdown(ref)
+    
+        if st.button("📥 Скачать DOCX", key="download_docx"):
+            doc = Document()
+            style = doc.styles["Normal"]
+            font = style.font
+            font.name = "Times New Roman"
+            font.size = Pt(14)
+            rFonts = style.element.rPr.rFonts
+            rFonts.set(qn("w:eastAsia"), "Times New Roman")
+    
+            doc.add_paragraph("Текст обзора:")
+            for paragraph in st.session_state[f"{user_id}_final_text"].strip().split("\n"):
+                doc.add_paragraph(paragraph)
+    
+            doc.add_paragraph("\nСписок литературы:")
+            for ref in st.session_state[f"{user_id}_final_refs"]:
+                doc.add_paragraph(ref)
+    
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+    
+            st.download_button(
+                label="📥 Скачать DOCX файл",
+                data=buffer,
+                file_name="обзор_со_ссылками.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="download_docx_file"
+            )
+
+
+    if st.session_state.get(f"{user_id}_final_text", ""):
+        st.subheader("📤 Экспорт в DOCX")
+        docx = generate_docx(
+            st.session_state.get(f"{user_id}_final_text", ""),
+            st.session_state.get(f"{user_id}_final_refs", [])
+        )
+        buffer = BytesIO()
+        docx.save(buffer)
+        buffer.seek(0)
+        st.download_button(
+            "📥 Скачать DOCX",
+            buffer,
+            file_name="citations.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+                        
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
     st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
@@ -615,60 +672,6 @@ if "gost_autoload_data" in st.session_state:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
     
-    #########################################
-    # Вывод итогового результата и экспорт в DOCX
-    #########################################
-    if st.session_state[f"{user_id}_final_text"]:
-        st.markdown("---")
-        st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
-    
-        for ref in st.session_state[f"{user_id}_final_refs"]:
-            st.markdown(ref)
-    
-        if st.button("📥 Скачать DOCX", key="download_docx"):
-            doc = Document()
-            style = doc.styles["Normal"]
-            font = style.font
-            font.name = "Times New Roman"
-            font.size = Pt(14)
-            rFonts = style.element.rPr.rFonts
-            rFonts.set(qn("w:eastAsia"), "Times New Roman")
-    
-            doc.add_paragraph("Текст обзора:")
-            for paragraph in st.session_state[f"{user_id}_final_text"].strip().split("\n"):
-                doc.add_paragraph(paragraph)
-    
-            doc.add_paragraph("\nСписок литературы:")
-            for ref in st.session_state[f"{user_id}_final_refs"]:
-                doc.add_paragraph(ref)
-    
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-    
-            st.download_button(
-                label="📥 Скачать DOCX файл",
-                data=buffer,
-                file_name="обзор_со_ссылками.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key="download_docx_file"
-            )
 
-
-    if st.session_state.get(f"{user_id}_final_text", ""):
-        st.subheader("📤 Экспорт в DOCX")
-        docx = generate_docx(
-            st.session_state.get(f"{user_id}_final_text", ""),
-            st.session_state.get(f"{user_id}_final_refs", [])
-        )
-        buffer = BytesIO()
-        docx.save(buffer)
-        buffer.seek(0)
-        st.download_button(
-            "📥 Скачать DOCX",
-            buffer,
-            file_name="citations.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
 if __name__ == "__main__":
     main()
