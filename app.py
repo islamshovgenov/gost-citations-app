@@ -373,9 +373,11 @@ def main():
     st.text_input("hidden_autoload_input", value="", key="gost_autoload_data", label_visibility="collapsed")
 
     # Обработка автозагруженных данных
-    if "gost_autoload_data" in st.session_state:
+if "gost_autoload_data" in st.session_state:
+    raw_data = st.session_state["gost_autoload_data"]
+    if raw_data:
         try:
-            payload = json.loads(st.session_state["gost_autoload_data"])
+            payload = json.loads(raw_data)
             st.session_state[f"{user_id}_fragments"] = payload.get("fragments", [])
             st.session_state[f"{user_id}_ref_map"] = payload.get("ref_map", {})
             st.session_state[f"{user_id}_ref_counter"] = payload.get("ref_counter", 1)
@@ -385,6 +387,8 @@ def main():
             st.success("✅ Проект восстановлен из LocalStorage!")
         except Exception as e:
             st.warning(f"Ошибка загрузки из LocalStorage: {e}")
+    else:
+        st.info("ℹ️ LocalStorage пуст — нет данных для восстановления.")
     st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
     # Инициализация состояния сессии
