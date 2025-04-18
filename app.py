@@ -434,8 +434,9 @@ def main():
     if st.session_state.get(f"{user_id}_final_text", ""):
         st.subheader("📤 Экспорт в DOCX")
         docx = generate_docx(
-            st.session_state.get(f"{user_id}_final_text", ""),
-            st.session_state.get(f"{user_id}_final_refs", [])
+        st.session_state.get(f"{user_id}_final_text", ""),
+        st.session_state.get(f"{user_id}_final_refs", [])
+        )
         buffer = BytesIO()
         docx.save(buffer)
         buffer.seek(0)
