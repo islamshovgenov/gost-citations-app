@@ -217,7 +217,7 @@ def replace_cite(match):
 
         return f'[{global_ref_map[ref_text]}]'
 
-    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
+frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
     return frag_text, global_ref_map, current_index
     def find_existing_ref(new_ref_text):
         for known_text in global_ref_map:
