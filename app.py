@@ -389,6 +389,7 @@ if "gost_autoload_data" in st.session_state:
             st.warning(f"Ошибка загрузки из LocalStorage: {e}")
     else:
         st.info("ℹ️ LocalStorage пуст — нет данных для восстановления.")
+    st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
     # Инициализация состояния сессии
     init_session_state(user_id)
