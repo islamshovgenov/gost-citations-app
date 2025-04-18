@@ -277,6 +277,7 @@ def init_session_state(user_id):
         st.session_state[f"{user_id}_final_text"] = ""
     if f"{user_id}_final_refs" not in st.session_state:
         st.session_state[f"{user_id}_final_refs"] = []
+    if f"{user_id}_fragments" not in st.session_state:
         st.session_state[f"{user_id}_fragments"] = []
     if 'ref_map' not in st.session_state:
         st.session_state[f"{user_id}_ref_map"] = {}
@@ -291,7 +292,7 @@ def init_session_state(user_id):
     if 'start_index' not in st.session_state:
         st.session_state.start_index = 1
 
-def restore_autosave():
+def restore_autosave(user_id):
     if 'restored' not in st.session_state:
         if os.path.exists(AUTOSAVE_FILE):
             try:
@@ -344,7 +345,6 @@ def main():
         last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
         if os.path.exists(last_proj):
             data = load_project(last_proj)
-            st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
             st.session_state.fragments = data.get("fragments", [])
             st.session_state.ref_map = data.get("ref_map", {})
             st.session_state.ref_counter = data.get("ref_counter", 1)
@@ -482,7 +482,7 @@ if "gost_autoload_data" in st.session_state:
             st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
 
     # Восстановление автосохранения
-    restore_autosave()
+    restore_autosave(user_id)
     
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
