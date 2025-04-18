@@ -333,7 +333,7 @@ def generate_docx(text, references):
     return doc
 
 def main():
-        st.sidebar.title("🧙 Оформление ссылок")
+    st.sidebar.title("🧙 Оформление ссылок")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     init_session_state(user_id)
     restore_autosave(user_id)
