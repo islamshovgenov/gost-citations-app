@@ -370,6 +370,7 @@ def main():
 
     autoload_from_localstorage(user_id)
     inject_autoload_receiver(user_id)
+            st.text_input("hidden_autoload_input", value="", key="gost_autoload_data", label_visibility="collapsed")
 
     # Обработка автозагруженных данных
     if "gost_autoload_data" in st.session_state:
