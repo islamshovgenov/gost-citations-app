@@ -168,14 +168,10 @@ from rapidfuzz import fuzz
 def clean_reference(text):
     return re.sub(r'^\[\d+\]\s*', '', text).strip()
 
-def find_existing_ref(new_ref_text, known_refs, threshold=90):
-        for known_text in known_refs:
             if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
-def replace_cite(match):
-        raw_num = int(match.group(1))
         if raw_num < 1 or raw_num > len(refs_list):
             return '[??]'
         raw_ref_text = refs_list[raw_num - 1]
@@ -195,14 +191,10 @@ def replace_cite(match):
         frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
         return frag_text, global_ref_map, current_index
 
-def find_existing_ref(new_ref_text):
-        for known_text in global_ref_map:
             if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
-def replace_cite(match):
-        raw_num = int(match.group(1))
         if raw_num < 1 or raw_num > len(refs_list):
             return '[??]'
         raw_ref_text = refs_list[raw_num - 1]
@@ -219,14 +211,10 @@ def replace_cite(match):
 
         frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
         return frag_text, global_ref_map, current_index
-def find_existing_ref(new_ref_text):
-        for known_text in global_ref_map:
             if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
-def replace_cite(match: re.Match) -> str:
-        nonlocal new_id
         raw_num = int(match.group(1))
         if raw_num < 1 or raw_num > len(refs_list):
             logging.warning('Оригинальный номер ссылки не найден в списке литературы')
@@ -251,8 +239,6 @@ def replace_cite(match: re.Match) -> str:
 
         frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
         return frag_text, global_ref_map, current_index
-def replace_cite(match: re.Match) -> str:
-        nonlocal new_id
         raw_num = int(match.group(1))
         # Проверяем, что номер есть в диапазоне ссылок (нумерация в списке начинается с 1)
         if raw_num < 1 or raw_num > len(local_refs):
@@ -685,21 +671,15 @@ if "gost_autoload_data" in st.session_state:
     from rapidfuzz import fuzz
     import re
 
-    def clean_reference(text):
-        return re.sub(r'^\[\d+\]\s*', '', text).strip()
-
-    def find_existing_ref(new_ref_text, known_refs, threshold=90):
-        for known_text in known_refs:
-            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
+    
+                if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
     local_refs_dict = frag['refs']
     refs_list = list(local_refs_dict.values())
 
-    def replace_cite(match):
-        raw_num = int(match.group(1))
-        if raw_num < 1 or raw_num > len(refs_list):
+            if raw_num < 1 or raw_num > len(refs_list):
             return '[??]'
         raw_ref_text = refs_list[raw_num - 1]
         ref_text = clean_reference(raw_ref_text)
@@ -725,21 +705,15 @@ def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> t
     from rapidfuzz import fuzz
     import re
 
-    def clean_reference(text):
-        return re.sub(r'^\[\d+\]\s*', '', text).strip()
-
-    def find_existing_ref(new_ref_text, known_refs, threshold=90):
-        for known_text in known_refs:
-            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
+    
+                if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
                 return known_text
         return None
 
     local_refs_dict = frag['refs']
     refs_list = list(local_refs_dict.values())
 
-    def replace_cite(match):
-        raw_num = int(match.group(1))
-        if raw_num < 1 or raw_num > len(refs_list):
+            if raw_num < 1 or raw_num > len(refs_list):
             return '[??]'
         raw_ref_text = refs_list[raw_num - 1]
         ref_text = clean_reference(raw_ref_text)
@@ -758,3 +732,10 @@ def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> t
 
 if __name__ == "__main__":
     main()
+
+def replace_cite(match):
+        raw_num = int(match.group(1))
+
+
+def find_existing_ref(new_ref_text, known_refs, threshold=90):
+        for known_text in known_refs:
