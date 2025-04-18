@@ -9,12 +9,15 @@ def inject_autoload_receiver(user_id):
     window.addEventListener("message", (event) => {{
         if (event.data && event.data.type === "gost-autoload") {{
             const payload = event.data.payload;
-            const input = document.createElement("input");
+            const input = window.parent.document.createElement("input");
             input.type = "hidden";
             input.name = "gost_autoload_data";
             input.value = JSON.stringify(payload);
-            document.forms[0].appendChild(input);
-            document.forms[0].dispatchEvent(new Event("submit"));
+            window.parent.document.body.appendChild(input);
+
+            // Эмулируем изменение, чтобы Streamlit подхватил
+            const evt = new Event("input", {{ bubbles: true }});
+            input.dispatchEvent(evt);
         }}
     }});
     </script>
@@ -38,11 +41,12 @@ def autoload_from_localstorage(user_id):
     const data = localStorage.getItem("autosave_" + {json.dumps(user_id)});
     if (data) {{
         const parsed = JSON.parse(data);
-        window.parent.postMessage({{ type: "gost-autoload", payload: parsed }}, "*");
+        window.postMessage({{ type: "gost-autoload", payload: parsed }}, "*");
     }}
     </script>
     """
     components.html(js_code, height=0)
+
 
 
 
