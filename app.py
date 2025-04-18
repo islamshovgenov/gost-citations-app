@@ -95,7 +95,6 @@ os.makedirs(PROJECT_DIR, exist_ok=True)
 REFS_SPLIT_REGEX = re.compile(
     r"(?=^\s*(?:\[\d+\]|(?:19|20)\d{2}\.|[A-ZА-ЯЁ][a-zа-яё]+,|\d+\.))", 
     flags=re.M
-)
 CITE_REGEX = re.compile(r"\[(\d+)\]")
 
 #########################################
@@ -429,7 +428,6 @@ def main():
                 file_name="обзор_со_ссылками.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 key="download_docx_file"
-            )
 
 
     if st.session_state.get(f"{user_id}_final_text", ""):
@@ -437,7 +435,6 @@ def main():
         docx = generate_docx(
             st.session_state.get(f"{user_id}_final_text", ""),
             st.session_state.get(f"{user_id}_final_refs", [])
-        )
         buffer = BytesIO()
         docx.save(buffer)
         buffer.seek(0)
@@ -446,7 +443,6 @@ def main():
             buffer,
             file_name="citations.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
 
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
@@ -466,7 +462,6 @@ def main():
         except Exception as e:
             st.warning(f"Ошибка парсинга автосохранения: {e}")
 
-    )
 
 autoload_from_localstorage(user_id)
     inject_autoload_receiver(user_id)
@@ -561,7 +556,6 @@ if "gost_autoload_data" in st.session_state:
             export_data,
             file_name=f"{project_name}.json",
             mime="application/json"
-        )
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Настройки")
@@ -672,4 +666,4 @@ if "gost_autoload_data" in st.session_state:
 
 
 if __name__ == "__main__":
-    main(
+    main()
