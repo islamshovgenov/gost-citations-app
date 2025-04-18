@@ -359,6 +359,8 @@ def main():
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
     st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
+    
+        for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
 
     local_data = load_from_localstorage_with_js_eval(user_id)
     if local_data:
@@ -530,7 +532,7 @@ if "gost_autoload_data" in st.session_state:
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
     #########################################
     st.subheader("📋 Добавленные фрагменты")
-    for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
+
         with st.expander(f"Фрагмент {idx + 1}", expanded=False):
             with st.form(key=f"fragment_form_{idx}"):
                 st.markdown(f"**Текст:**\n{frag['text']}")
