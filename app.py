@@ -339,13 +339,14 @@ def main():
         last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
         if os.path.exists(last_proj):
             data = load_project(last_proj)
+            st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
             st.session_state.fragments = data.get("fragments", [])
             st.session_state.ref_map = data.get("ref_map", {})
             st.session_state.ref_counter = data.get("ref_counter", 1)
             st.session_state.final_text = data.get("final_text", "")
             st.session_state.final_refs = data.get("final_refs", [])
             st.session_state.restored = True
-        st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
+
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
 
     local_data = load_from_localstorage_with_js_eval(user_id)
