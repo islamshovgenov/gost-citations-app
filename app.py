@@ -37,7 +37,7 @@ def autosave_to_localstorage(user_id, data):
 def autoload_from_localstorage(user_id):
     js_code = f"""
     <script>
-    const data = localStorage.getItem("autosave_" + {json.dumps(user_id)});
+    const data = localStorage.getItem("autosave_{user_id}");
     if (data) {{
         const parsed = JSON.parse(data);
         window.postMessage({{ type: "gost-autoload", payload: parsed }}, "*");
