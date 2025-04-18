@@ -340,6 +340,10 @@ def generate_docx(text, references):
 
 def main():
 
+    user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
+    init_session_state(user_id)
+    restore_autosave(user_id)
+    
     # Автоматическая загрузка последнего проекта
     if "last_opened_project" in st.session_state:
         last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
@@ -352,9 +356,7 @@ def main():
             st.session_state.final_refs = data.get("final_refs", [])
             st.session_state.restored = True
 
-    user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
-    init_session_state(user_id)
-    restore_autosave(user_id)
+
     
     #########################################
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
