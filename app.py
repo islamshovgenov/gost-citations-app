@@ -3,7 +3,6 @@ import streamlit.components.v1 as components
 
 
 def inject_autoload_receiver(user_id):
-    import streamlit.components.v1 as components
     js_code = f"""
     <script>
     window.addEventListener("message", (event) => {{
@@ -60,7 +59,6 @@ def load_from_localstorage_with_js_eval(user_id):
 import streamlit as st
 st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
 import os
-import json
 import requests
 
 
@@ -74,10 +72,7 @@ GITHUB_BRANCH = "main"
 
 
 import sys
-import streamlit as st
 import re
-import json
-import os
 import logging
 from docx import Document
 from docx.shared import Pt
@@ -142,7 +137,6 @@ def parse_references(refs_text: str) -> dict:
     - работает с русскими и английскими записями;
     - определяет начало записи по различным шаблонам.
     """
-    import re
     lines = refs_text.strip().split("\n")
 
     # Список возможных шаблонов начала новой записи
