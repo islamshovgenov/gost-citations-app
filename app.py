@@ -429,7 +429,7 @@ def main():
                 file_name="обзор_со_ссылками.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 key="download_docx_file"
-
+)
 
     if st.session_state.get(f"{user_id}_final_text", ""):
         st.subheader("📤 Экспорт в DOCX")
