@@ -58,6 +58,7 @@ def load_from_localstorage_with_js_eval(user_id):
     return result
 
 import streamlit as st
+st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
 import os
 import json
 import requests
@@ -338,8 +339,7 @@ def generate_docx(text, references):
     return doc
 
 def main():
-    st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
-    st.sidebar.title("🧙 Оформление ссылок")
+        st.sidebar.title("🧙 Оформление ссылок")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     init_session_state(user_id)
     restore_autosave(user_id)
