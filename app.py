@@ -1,591 +1,458 @@
+```python
+# --- Инициализация состояния сессии ---
 
+def init_session_state(uid: str):
+    keys = ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']
+    defaults = {
+        'fragments': [],
+        'ref_map': {},
+        'ref_counter': 1,
+        'final_text': '',
+        'final_refs': []
+    }
+    for k in keys:
+        key_name = f"{uid}_{k}"
+        if key_name not in st.session_state:
+            st.session_state[key_name] = defaults[k]
+    # начальный глобальный индекс
+    if f"{uid}_start_index" not in st.session_state:
+        st.session_state[f"{uid}_start_index"] = 1
+    if 'edit_index' not in st.session_state:
+        st.session_state.edit_index = None
+    if 'restored' not in st.session_state:
+        st.session_state.restored = False
+
+
+# --- Восстановление автосэйва ---
+
+def restore_autosave(uid: str):
+    if not st.session_state.restored and os.path.exists(AUTOSAVE_FILE):
+        data = load_project(AUTOSAVE_FILE)
+        for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']:
+            key_name = f"{uid}_{k}"
+            st.session_state[key_name] = data.get(k, st.session_state[key_name])
+        st.session_state.restored = True
+        st.success('✅ Восстановлен последний проект из локального файла')
+
+
+# --- Обновление автосэйва ---
+
+def update_autosave(uid: str):
+    data = {k: st.session_state[f"{uid}_{k}"] for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']}
+    autosave_project(data)
+
+
+# --- Основная функция ---
+def main():
+    st.set_page_config(page_title='Объединение ссылок по ГОСТ', layout='wide')
+
+    # Sidebar: управление проектами
+    st.sidebar.title('📁 Управление проектами')
+    uid = st.sidebar.text_input('Ваше имя', value='user')
+    init_session_state(uid)
+    restore_autosave(uid)
+
+    # выбор существующего проекта или дефолт
+    projects = [f for f in os.listdir(PROJECT_DIR) if f.endswith('.json')]
+    selected = st.sidebar.selectbox('Выбрать проект', ['—'] + projects)
+    project_path = os.path.join(PROJECT_DIR, selected) if selected != '—' else os.path.join(PROJECT_DIR, f"default.json")
+
+    # Кнопки управления проектом
+    if st.sidebar.button('💾 Сохранить проект'):
+        save_project(project_path, {k: st.session_state[f"{uid}_{k}"] for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']})
+        st.sidebar.success(f'Проект сохранён: {os.path.basename(project_path)}')
+
+    if st.sidebar.button('📂 Загрузить проект'):
+        if os.path.exists(project_path):
+            data = load_project(project_path)
+            for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']:
+                st.session_state[f"{uid}_{k}"] = data.get(k, st.session_state[f"{uid}_{k}"])
+            st.sidebar.success(f'Проект загружен: {os.path.basename(project_path)}')
+        else:
+            st.sidebar.error('Файл проекта не найден')
+
+    if st.sidebar.button('🗑 Удалить проект'):
+        if os.path.exists(project_path):
+            os.remove(project_path)
+            st.sidebar.success(f'Проект удалён: {os.path.basename(project_path)}')
+        else:
+            st.sidebar.error('Файл проекта не найден')
+
+    uploaded = st.sidebar.file_uploader('Импорт из JSON', type='json')
+    if uploaded is not None:
+        try:
+            data = json.load(uploaded)
+            for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']:
+                st.session_state[f"{uid}_{k}"] = data.get(k, st.session_state[f"{uid}_{k}"])
+            st.sidebar.success('Импорт выполнен')
+        except Exception as e:
+            st.sidebar.error(f'Ошибка импорта: {e}')
+
+    st.sidebar.markdown('---')
+    st.sidebar.number_input('Начальный номер глобальной нумерации', min_value=1, key=f"{uid}_start_index")
+
+    # JS: автозагрузка и автосохранение в браузере
+    inject_autoload_receiver(uid)
+    autoload_from_localstorage(uid)
+    raw_js = load_from_localstorage_with_js_eval(uid)
+    if raw_js:
+        try:
+            payload = json.loads(raw_js)
+            for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']:
+                st.session_state[f"{uid}_{k}"] = payload.get(k, st.session_state[f"{uid}_{k}"])
+            st.success('✅ Восстановлено из LocalStorage')
+        except Exception as e:
+            st.warning(f'Ошибка восстановления из LocalStorage: {e}')
+
+    st.title('Объединение ссылок (ГОСТ)')
+
+    # Просмотр добавленных фрагментов
+    st.subheader('Добавленные фрагменты')
+    for i, frag in enumerate(st.session_state[f"{uid}_fragments"]):
+        with st.expander(f'Фрагмент {i+1}', expanded=False):
+            st.text_area('Текст', frag['text'], disabled=True, height=150)
+            st.markdown('**Список литературы:**')
+            for num, txt in frag['refs'].items():
+                st.write(f'{num}. {txt}')
+            cols = st.columns([0.2, 0.2, 0.2, 0.4])
+            if cols[0].button('⬆️', key=f'up_{i}') and i > 0:
+                lst = st.session_state[f"{uid}_fragments"]
+                lst[i-1], lst[i] = lst[i], lst[i-1]
+                st.experimental_rerun()
+            if cols[1].button('⬇️', key=f'down_{i}') and i < len(st.session_state[f"{uid}_fragments"]) - 1:
+                lst = st.session_state[f"{uid}_fragments"]
+                lst[i+1], lst[i] = lst[i], lst[i+1]
+                st.experimental_rerun()
+            if cols[2].button('✏️', key=f'edit_{i}'):
+                st.session_state.edit_index = i
+                st.experimental_rerun()
+            if cols[3].button('🗑', key=f'del_{i}'):
+                st.session_state[f"{uid}_fragments"].pop(i)
+                st.experimental_rerun()
+```
+# -*- coding: utf-8 -*-
+import os
+import json
+import re
+import logging
+from io import BytesIO
+
+import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_js_eval import streamlit_js_eval
+from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from rapidfuzz import fuzz
 
+# Логирование
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def inject_autoload_receiver(user_id):
-    js_code = f"""
+# Константы
+PROJECT_DIR = "projects"
+AUTOSAVE_FILE = "project_autosave.json"
+if not os.path.exists(PROJECT_DIR):
+    os.makedirs(PROJECT_DIR)
+
+# Регулярные выражения
+REFS_SPLIT_REGEX = re.compile(
+    r"(?=^\s*(?:\[\d+\]|(?:19|20)\d{2}\.|[A-ZА-ЯЁ][a-zа-яё]+,|\d+\.))",
+    flags=re.M
+)
+CITE_REGEX = re.compile(r"\[(\d+)\]")
+
+# --- Функции для автозагрузки через localStorage и JS EVAL ---
+
+def inject_autoload_receiver(user_id: str):
+    js = f"""
     <script>
-    window.addEventListener("message", (event) => {{
-        if (event.data && event.data.type === "gost-autoload") {{
+    window.addEventListener('message', event => {{
+        if (event.data?.type === 'gost-autoload') {{
             const payload = event.data.payload;
-            const input = window.parent.document.createElement("input");
-            input.type = "hidden";
-            input.name = "gost_autoload_data";
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'gost_autoload_data';
             input.value = JSON.stringify(payload);
-            window.parent.document.body.appendChild(input);
-
-            // Эмулируем изменение, чтобы Streamlit подхватил
-            const evt = new Event("input", {{ bubbles: true }});
-            input.dispatchEvent(evt);
+            document.body.appendChild(input);
+            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
         }}
     }});
     </script>
     """
-    components.html(js_code, height=0)
+    components.html(js, height=0)
 
 
-def autosave_to_localstorage(user_id, data):
-    import json
-    js_code = f"""
+def autoload_from_localstorage(user_id: str):
+    js = f"""
     <script>
-    localStorage.setItem("autosave_" + {json.dumps(user_id)}, JSON.stringify({json.dumps(data)}));
+    const data = localStorage.getItem('autosave_{user_id}');
+    if (data) window.postMessage({{ type: 'gost-autoload', payload: JSON.parse(data) }}, '*');
     </script>
     """
-    components.html(js_code, height=0)
+    components.html(js, height=0)
 
 
-def autoload_from_localstorage(user_id):
-    js_code = f"""
-    <script>
-    const data = localStorage.getItem("autosave_{user_id}");
-    if (data) {{
-        const parsed = JSON.parse(data);
-        window.postMessage({{ type: "gost-autoload", payload: parsed }}, "*");
-    }}
-    </script>
-    """
-    components.html(js_code, height=0)
-
-
-
-
-from streamlit_js_eval import streamlit_js_eval
-
-def load_from_localstorage_with_js_eval(user_id):
+def load_from_localstorage_with_js_eval(user_id: str) -> str:
     key = f"autosave_{user_id}"
-    result = streamlit_js_eval(js_expressions=f"localStorage.getItem('{key}')", key="read_localstorage")
-    return result
+    return streamlit_js_eval(js_expressions=f"localStorage.getItem('{key}')", key="read_localstorage")
 
-import streamlit as st
-st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
-import os
-import requests
+# --- Работа с проектом и автосохранение ---
 
-
-# Проверка наличия секретов
-
-GITHUB_TOKEN = "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"
-GITHUB_USERNAME = "islamshovgenov"
-GITHUB_REPO = "gost-citations-app"
-GITHUB_BRANCH = "main"
-
-
-
-import sys
-import re
-import logging
-from docx import Document
-from docx.shared import Pt
-from docx.oxml.ns import qn
-from io import BytesIO
-
-
-# spaCy временно отключён
-nlp = None
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Константы и пути
-PROJECT_DIR = "projects"
-AUTOSAVE_FILE = "project_autosave.json"
-os.makedirs(PROJECT_DIR, exist_ok=True)
-
-# Предкомпилированные регулярные выражения (используются в process_fragment и в случае отсутствия spaCy)
-REFS_SPLIT_REGEX = re.compile(
-    r"(?=^\s*(?:\[\d+\]|(?:19|20)\d{2}\.|[A-ZА-ЯЁ][a-zа-яё]+,|\d+\.))", 
-    flags=re.M
-    )
-CITE_REGEX = re.compile(r"\[(\d+)\]")
-
-#########################################
-# Функции для управления файлами проекта
-#########################################
-def load_project(project_path: str) -> dict:
-    """Загружает проект из JSON файла."""
-    try:
-        with open(project_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data
-    except Exception as e:
-        logging.error(f"Ошибка загрузки проекта: {e}")
-        return {}
-
-def save_project(project_path: str, data: dict) -> None:
-    """Сохраняет проект в JSON файл."""
+def save_project(project_path: str, data: dict):
     try:
         with open(project_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logging.error(f"Ошибка сохранения проекта: {e}")
 
-def autosave_project(data: dict) -> None:
-    """Автосохранение проекта в локальный файл."""
+
+def load_project(project_path: str) -> dict:
+    try:
+        with open(project_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Ошибка загрузки проекта: {e}")
+        return {}
+
+
+def autosave_project(data: dict):
     try:
         with open(AUTOSAVE_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logging.error(f"Ошибка автосохранения проекта: {e}")
 
-#########################################
-# Функция для разбора и очистки списка литературы с помощью spaCy (вариант 2)
-#########################################
+# --- Парсинг списка литературы ---
+
 def parse_references(refs_text: str) -> dict:
-    """
-    Универсальный разбор списка литературы:
-    - поддерживает нумерованные и не нумерованные списки;
-    - работает с русскими и английскими записями;
-    - определяет начало записи по различным шаблонам.
-    """
-    lines = refs_text.strip().split("\n")
+    parts = [s.strip() for s in re.split(r"(?=^\s*\[?\d+\]?\.?)", refs_text.strip(), flags=re.M) if s.strip()]
+    refs = {}
+    for idx, p in enumerate(parts, start=1):
+        text = re.sub(r"^\[?\d+\]?\.?", '', p).strip()
+        if text:
+            refs[idx] = text
+    return refs
 
-    # Список возможных шаблонов начала новой записи
-    patterns = [
-        r"(?=^\s*\[\d+\])",                      # [1]
-        r"(?=^\s*\d+[\.)])",                     # 1. или 1)
-        r"(?=^\s*(19|20)\d{2}\.)",               # 2020. Текст...
-        r"(?=^[A-ZА-ЯЁ][a-zа-яё]+.*?\(\d{4}\))", # Smith J. (2020) или Иванов И.И. (2020)
-        r"(?=^[A-ZА-ЯЁ][a-zа-яё]+,)"             # Ivanov, A.
-    ]
+# --- Обработка фрагмента ---
 
-    best_split = []
-    for pat in patterns:
-        split_regex = re.compile(pat, flags=re.M)
-        parts = [s.strip() for s in split_regex.split(refs_text) if s.strip()]
-        if len(parts) > len(best_split):
-            best_split = parts
+def process_fragment(frag: dict, global_map: dict, counter: list) -> tuple:
+    local_list = [v for _, v in sorted(frag['refs'].items(), key=lambda x: int(x[0]))]
 
-    refs_dict = {}
-    for idx, ref in enumerate(best_split, start=1):
-        ref = ref.strip()
-        if not ref:
-            continue
-        refs_dict[idx] = ref
-    return refs_dict
-from rapidfuzz import fuzz
+    def replace_cite(match: re.Match) -> str:
+        num = int(match.group(1))
+        if 1 <= num <= len(local_list):
+            ref_text = local_list[num - 1]
+            for known in global_map:
+                if fuzz.ratio(known.lower(), ref_text.lower()) >= 90:
+                    return f"[{global_map[known]}]"
+            global_map[ref_text] = counter[0]
+            counter[0] += 1
+            return f"[{global_map[ref_text]}]"
+        logging.warning(f"Номер ссылки [{num}] вне диапазона списка литературы")
+        return '[??]'
 
-def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> tuple:
-    """
-    Обрабатывает фрагмент, заменяя локальные ссылки на глобальные номера.
-    Убирает дубликаты номеров и очищает [x] в начале ссылок литературы.
-    """
-    from rapidfuzz import fuzz
-    local_refs_dict = frag['refs']
-    refs_list = list(local_refs_dict.values())
-    new_id = 1
-    threshold = 90
+    text = re.sub(CITE_REGEX, replace_cite, frag['text'])
+    return text, global_map, counter
 
-    def clean_reference(text):
-        return re.sub(r'^\[\d+\]\s*', '', text).strip()
-#########################################
-# Инициализация переменных сессии
-#########################################
-def init_session_state(user_id):
-    if f"{user_id}_fragments" not in st.session_state:
-        st.session_state[f"{user_id}_fragments"] = []
-    if f"{user_id}_ref_map" not in st.session_state:
-        st.session_state[f"{user_id}_ref_map"] = {}
-    if f"{user_id}_ref_counter" not in st.session_state:
-        st.session_state[f"{user_id}_ref_counter"] = 1
-    if f"{user_id}_final_text" not in st.session_state:
-        st.session_state[f"{user_id}_final_text"] = ""
-    if f"{user_id}_final_refs" not in st.session_state:
-        st.session_state[f"{user_id}_final_refs"] = []
-    if f"{user_id}_fragments" not in st.session_state:
-        st.session_state[f"{user_id}_fragments"] = []
-    if 'ref_map' not in st.session_state:
-        st.session_state[f"{user_id}_ref_map"] = {}
-    if 'ref_counter' not in st.session_state:
-        st.session_state[f"{user_id}_ref_counter"] = 1
-    if 'final_text' not in st.session_state:
-        st.session_state[f"{user_id}_final_text"] = ""
-    if 'final_refs' not in st.session_state:
-        st.session_state[f"{user_id}_final_refs"] = []
-    if 'edit_index' not in st.session_state:
-        st.session_state.edit_index = None
-    if 'start_index' not in st.session_state:
-        st.session_state.start_index = 1
+# --- Генерация DOCX ---
 
-def restore_autosave(user_id):
-    if 'restored' not in st.session_state:
-        if os.path.exists(AUTOSAVE_FILE):
-            try:
-                with open(AUTOSAVE_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
-                    st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
-                    st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
-                    st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
-                    st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
-                st.success("✅ Автоматически восстановлен последний проект")
-            except Exception as e:
-                st.warning(f"Ошибка при восстановлении: {e}")
-        st.session_state.restored = True
-
-def update_autosave():
-    data = {
-        "fragments": st.session_state.get("fragments", []),
-        "ref_map": st.session_state.get("ref_map", {}),
-        "ref_counter": st.session_state.get("ref_counter", 1),
-        "final_text": st.session_state.get("final_text", ""),
-        "final_refs": st.session_state.get("final_refs", [])
-    }
-    autosave_project(data)
-
-#########################################
-# Основная функция приложения
-#########################################
-from docx import Document
-from docx.shared import Pt
-
-def generate_docx(text, references):
+def generate_docx(text: str, references: list) -> Document:
     doc = Document()
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Times New Roman'
     font.size = Pt(12)
-
-    doc.add_paragraph(text.strip())
-    doc.add_paragraph("\nСписок литературы:")
+    for para in text.strip().split('\n'):
+        doc.add_paragraph(para)
+    doc.add_paragraph('Список литературы:')
     for ref in references:
         doc.add_paragraph(ref, style='List Number')
-
     return doc
 
+# --- Инициализация состояния сессии ---
+
+def init_session_state(uid: str):
+    keys = ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']
+    defaults = {
+        'fragments': [],
+        'ref_map': {},
+        'ref_counter': 1,
+        'final_text': '',
+        'final_refs': []
+    }
+    for k in keys:
+        key = f"{uid}_{k}"
+        if key not in st.session_state:
+            st.session_state[key] = defaults[k]
+    if f"{uid}_start_index" not in st.session_state:
+        st.session_state[f"{uid}_start_index"] = 1
+    if 'edit_index' not in st.session_state:
+        st.session_state.edit_index = None
+    if 'restored' not in st.session_state:
+        st.session_state.restored = False
+
+
+def restore_autosave(uid: str):
+    if not st.session_state.restored and os.path.exists(AUTOSAVE_FILE):
+        data = load_project(AUTOSAVE_FILE)
+        for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']:
+            st.session_state[f"{uid}_{k}"] = data.get(k, st.session_state[f"{uid}_{k}"])
+        st.session_state.restored = True
+        st.success('✅ Восстановлен последний проект')
+
+
+def update_autosave(uid: str):
+    data = {k: st.session_state[f"{uid}_{k}"] for k in ['fragments', 'ref_map', 'ref_counter', 'final_text', 'final_refs']}
+    autosave_project(data)
+
+# --- Основная функция ---
+
 def main():
-    st.sidebar.title("🧙 Оформление ссылок")
-    user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
-    init_session_state(user_id)
-    restore_autosave(user_id)
+    st.set_page_config(page_title='Объединение ссылок по ГОСТ', layout='wide')
 
-    # Автоматическая загрузка последнего проекта
-    if "last_opened_project" in st.session_state:
-        last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
-        if os.path.exists(last_proj):
-            data = load_project(last_proj)
-            st.session_state.fragments = data.get("fragments", [])
-            st.session_state.ref_map = data.get("ref_map", {})
-            st.session_state.ref_counter = data.get("ref_counter", 1)
-            st.session_state.final_text = data.get("final_text", "")
-            st.session_state.final_refs = data.get("final_refs", [])
-            st.session_state.restored = True
+    # Sidebar
+    st.sidebar.title('📁 Управление проектами')
+    uid = st.sidebar.text_input('Ваше имя', value='user')
+    init_session_state(uid)
+    restore_autosave(uid)
+    projects = [f for f in os.listdir(PROJECT_DIR) if f.endswith('.json')]
+    selected = st.sidebar.selectbox('Выбрать проект', ['—'] + projects)
+    project_path = os.path.join(PROJECT_DIR, selected) if selected != '—' else os.path.join(PROJECT_DIR, f"default.json")
 
-
-
-    #########################################
-    # Просмотр добавленных фрагментов с возможностью редактирования и удаления
-    #########################################
-    st.subheader("📋 Добавленные фрагменты")
-    for idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
-        with st.expander(f"Фрагмент {idx + 1}", expanded=False):
-            with st.form(key=f"fragment_form_{idx}"):
-                st.markdown(f"**Текст:**\n{frag['text']}")
-                st.markdown("**Список литературы:**")
-                if isinstance(frag.get("refs"), dict):
-                    for orig_num, ref_text in frag["refs"].items():
-                        st.markdown(f"{orig_num}. {ref_text}")
-                elif isinstance(frag.get("refs"), list):
-                    for i, ref_text in enumerate(frag["refs"]):
-                        st.markdown(f"{i+1}. {ref_text}")
-
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
-                with col1:
-                    up = st.form_submit_button("⬆️")
-                    if up and idx > 0:
-                        st.session_state[f"{user_id}_fragments"][idx - 1], st.session_state[f"{user_id}_fragments"][idx] = \
-                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx - 1]
-                        st.rerun()
-                with col2:
-                    down = st.form_submit_button("⬇️")
-                    if down and idx < len(st.session_state[f"{user_id}_fragments"]) - 1:
-                        st.session_state[f"{user_id}_fragments"][idx + 1], st.session_state[f"{user_id}_fragments"][idx] = \
-                            st.session_state[f"{user_id}_fragments"][idx], st.session_state[f"{user_id}_fragments"][idx + 1]
-                        st.rerun()
-                with col3:
-                    edit_button = st.form_submit_button("✏️ Редактировать")
-                    if edit_button:
-                        st.session_state.edit_index = idx
-                        st.rerun()
-                with col4:
-                    delete_button = st.form_submit_button("🗑 Удалить")
-                    if delete_button:
-                        st.session_state[f"{user_id}_fragments"].pop(idx)
-                        st.rerun()
-
-    #########################################
-    # Вывод итогового результата и экспорт в DOCX
-    #########################################
-    if st.session_state[f"{user_id}_final_text"]:
-        st.markdown("---")
-        st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
-
-        for ref in st.session_state[f"{user_id}_final_refs"]:
-            st.markdown(ref)
-
-        if st.button("📥 Скачать DOCX", key="download_docx"):
-            doc = Document()
-            style = doc.styles["Normal"]
-            font = style.font
-            font.name = "Times New Roman"
-            font.size = Pt(14)
-            rFonts = style.element.rPr.rFonts
-            rFonts.set(qn("w:eastAsia"), "Times New Roman")
-
-            doc.add_paragraph("Текст обзора:")
-            for paragraph in st.session_state[f"{user_id}_final_text"].strip().split("\n"):
-                doc.add_paragraph(paragraph)
-
-            doc.add_paragraph("\nСписок литературы:")
-            for ref in st.session_state[f"{user_id}_final_refs"]:
-                doc.add_paragraph(ref)
-
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-
-            st.download_button(
-                label="📥 Скачать DOCX файл",
-                data=buffer,
-                file_name="обзор_со_ссылками.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key="download_docx_file"
-)
-
-    if st.session_state.get(f"{user_id}_final_text", ""):
-        st.subheader("📤 Экспорт в DOCX")
-        docx = generate_docx(
-        st.session_state.get(f"{user_id}_final_text", ""),
-        st.session_state.get(f"{user_id}_final_refs", [])
-        )
-        buffer = BytesIO()
-        docx.save(buffer)
-        buffer.seek(0)
-        st.download_button(
-            "📥 Скачать DOCX",
-            buffer,
-            file_name="citations.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-)
-    # Статистика по проекту
-    st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
-    st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
-
-    local_data = load_from_localstorage_with_js_eval(user_id)
-    if local_data:
+    if st.sidebar.button('💾 Сохранить проект'):
+        save_project(project_path, {k: st.session_state[f"{uid}_{k}"] for k in ['fragments','ref_map','ref_counter','final_text','final_refs']})
+        st.sidebar.success(f'Проект сохранён: {os.path.basename(project_path)}')
+    if st.sidebar.button('📂 Загрузить проект') and os.path.exists(project_path):
+        data = load_project(project_path)
+        for k in ['fragments','ref_map','ref_counter','final_text','final_refs']:
+            st.session_state[f"{uid}_{k}"] = data.get(k, st.session_state[f"{uid}_{k}"])
+        st.sidebar.success(f'Проект загружен: {os.path.basename(project_path)}')
+    if st.sidebar.button('🗑 Удалить проект') and os.path.exists(project_path):
+        os.remove(project_path)
+        st.sidebar.success(f'Проект удалён: {os.path.basename(project_path)}')
+    uploaded = st.sidebar.file_uploader('Импорт из JSON', type='json')
+    if uploaded:
         try:
-            payload = json.loads(local_data)
-            st.session_state[f"{user_id}_fragments"] = payload.get("fragments", [])
-            st.session_state[f"{user_id}_ref_map"] = payload.get("ref_map", {})
-            st.session_state[f"{user_id}_ref_counter"] = payload.get("ref_counter", 1)
-            st.session_state[f"{user_id}_final_text"] = payload.get("final_text", "")
-            st.session_state[f"{user_id}_final_refs"] = payload.get("final_refs", [])
-            st.session_state.restored = True
-            st.success("✅ Проект восстановлен из LocalStorage (через JS Eval)")
+            data = json.load(uploaded)
+            for k in ['fragments','ref_map','ref_counter','final_text','final_refs']:
+                st.session_state[f"{uid}_{k}"] = data.get(k, st.session_state[f"{uid}_{k}"])
+            st.sidebar.success('Импорт выполнен')
         except Exception as e:
-            st.warning(f"Ошибка парсинга автосохранения: {e}")
+            st.sidebar.error(f'Ошибка импорта: {e}')
+    st.sidebar.markdown('---')
+    st.sidebar.number_input('Начальный номер глобальной нумерации', min_value=1, key=f"{uid}_start_index")
 
-
-autoload_from_localstorage(user_id)
-    inject_autoload_receiver(user_id)
-    st.text_input("hidden_autoload_input", value="", key="gost_autoload_data", label_visibility="collapsed")
-
-    # Обработка автозагруженных данных
-if "gost_autoload_data" in st.session_state:
-    raw_data = st.session_state["gost_autoload_data"]
-    if raw_data:
+    # JS
+    inject_autoload_receiver(uid)
+    autoload_from_localstorage(uid)
+    raw_js = load_from_localstorage_with_js_eval(uid)
+    if raw_js:
         try:
-            payload = json.loads(raw_data)
-            st.session_state[f"{user_id}_fragments"] = payload.get("fragments", [])
-            st.session_state[f"{user_id}_ref_map"] = payload.get("ref_map", {})
-            st.session_state[f"{user_id}_ref_counter"] = payload.get("ref_counter", 1)
-            st.session_state[f"{user_id}_final_text"] = payload.get("final_text", "")
-            st.session_state[f"{user_id}_final_refs"] = payload.get("final_refs", [])
-            st.session_state.restored = True
-            st.success("✅ Проект восстановлен из LocalStorage!")
+            payload = json.loads(raw_js)
+            for k in ['fragments','ref_map','ref_counter','final_text','final_refs']:
+                st.session_state[f"{uid}_{k}"] = payload.get(k, st.session_state[f"{uid}_{k}"])
+            st.success('✅ Восстановлено из LocalStorage')
         except Exception as e:
-            st.warning(f"Ошибка загрузки из LocalStorage: {e}")
-    else:
-        st.info("ℹ️ LocalStorage пуст — нет данных для восстановления.")
-    st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
+            st.warning(f'Ошибка восстановления из LocalStorage: {e}')
 
+    # Main UI
+    st.title('Объединение ссылок (ГОСТ)')
+    st.subheader('Добавленные фрагменты')
+    for i, frag in enumerate(st.session_state[f"{uid}_fragments"]):
+        with st.expander(f'Фрагмент {i+1}'):
+            st.text_area('Текст', frag['text'], disabled=True, height=150)
+            st.markdown('**Список литературы:**')
+            for num, ref in frag['refs'].items():
+                st.write(f'{num}. {ref}')
+            cols = st.columns([0.2,0.2,0.2,0.4])
+            if cols[0].button('⬆️', key=f'up_{i}') and i>0:
+                lst = st.session_state[f"{uid}_fragments"]; lst[i-1], lst[i] = lst[i], lst[i-1]; st.experimental_rerun()
+            if cols[1].button('⬇️', key=f'down_{i}') and i < len(st.session_state[f"{uid}_fragments"]) - 1:
+                lst = st.session_state[f"{uid}_fragments"]; lst[i+1], lst[i] = lst[i], lst[i+1]; st.experimental_rerun()
+            if cols[2].button('✏️', key=f'edit_{i}'): st.session_state.edit_index = i; st.experimental_rerun()
+            if cols[3].button('🗑', key=f'del_{i}'): st.session_state[f"{uid}_fragments"].pop(i); st.experimental_rerun()
 
-
-    # Панель управления проектами
-    st.sidebar.title("📁 Управление проектами")
-    projects_files = [p for p in os.listdir(PROJECT_DIR) if p.endswith(".json")]
-    chosen_file = st.sidebar.selectbox("Выбрать проект из списка", ["—"] + projects_files)
-    if chosen_file != "—":
-        st.session_state["last_opened_project"] = chosen_file  # Запоминаем последний проект
-        project_name = chosen_file.replace(".json", "")
-    else:
-        project_name = st.sidebar.text_input("Или ввести название проекта вручную", value="default")
-        project_path = os.path.join(PROJECT_DIR, f"{project_name}.json")
-
-    # Кнопки сохранения, загрузки, удаления, импорта и экспорта проекта
-    if st.sidebar.button("💾 Сохранить проект"):
-        data_to_save = {
-            "fragments": st.session_state.get("fragments", []),
-            "ref_map": st.session_state.get("ref_map", {}),
-            "ref_counter": st.session_state.get("ref_counter", 1),
-            "final_text": st.session_state.get("final_text", ""),
-            "final_refs": st.session_state.get("final_refs", [])
-        }
-        save_project(project_path, data_to_save)
-        st.sidebar.success(f"Проект '{project_name}' сохранён")
-
-    if st.sidebar.button("📂 Загрузить проект"):
-        if os.path.exists(project_path):
-            data = load_project(project_path)
-            st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
-            st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
-            st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
-            st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
-            st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
-            st.sidebar.success(f"Проект '{project_name}' загружен")
-        else:
-            st.sidebar.error("Файл проекта не найден")
-
-    if st.sidebar.button("🗑 Удалить проект"):
-        if os.path.exists(project_path):
-            os.remove(project_path)
-            st.sidebar.success(f"Проект '{project_name}' удалён")
-        else:
-            st.sidebar.error("Такого проекта нет в папке")
-
-    uploaded_file = st.sidebar.file_uploader("📥 Импорт из файла (.json)", type="json")
-    if uploaded_file is not None:
-        try:
-            data = json.load(uploaded_file)
-            st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
-            st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
-            st.session_state[f"{user_id}_ref_counter"] = data.get("ref_counter", 1)
-            st.session_state[f"{user_id}_final_text"] = data.get("final_text", "")
-            st.session_state[f"{user_id}_final_refs"] = data.get("final_refs", [])
-            st.sidebar.success("Проект импортирован из файла")
-        except Exception as e:
-            st.sidebar.error(f"Ошибка при импорте: {e}")
-
-    if st.sidebar.button("📤 Экспорт в файл"):
-        export_data = json.dumps({
-            "fragments": st.session_state.get("fragments", []),
-            "ref_map": st.session_state.get("ref_map", {}),
-            "ref_counter": st.session_state.get("ref_counter", 1),
-            "final_text": st.session_state.get("final_text", ""),
-            "final_refs": st.session_state.get("final_refs", [])
-        }, ensure_ascii=False, indent=2)
-        st.sidebar.download_button(
-            "📎 Скачать JSON",
-            export_data,
-            file_name=f"{project_name}.json",
-            mime="application/json"
-        )
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ Настройки")
-    st.session_state.start_index = st.sidebar.number_input("Начальный номер глобальной нумерации", min_value=1, value=1)
-    st.sidebar.markdown("---")
-
-    # Автовосстановление последнего проекта
-    if "last_opened_project" in st.session_state and st.session_state["last_opened_project"].endswith(".json"):
-        default_project = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
-        if os.path.exists(default_project):
-            data = load_project(default_project)
-            st.session_state.fragments = data.get("fragments", [])
-            st.session_state.ref_map = data.get("ref_map", {})
-            st.session_state.ref_counter = data.get("ref_counter", 1)
-            st.session_state.final_text = data.get("final_text", "")
-            st.session_state.final_refs = data.get("final_refs", [])
-            st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
-
-    # Инструкция для пользователя
-    st.markdown("""
-    #### 📌 Инструкция:
-    - Вставляйте **текст фрагмента**, где уже есть ссылки вида [1], [2] и т.д.
-    - Вставьте список литературы к этому фрагменту (в порядке ссылок).
-    - Поддерживаются фрагменты, где ссылки начинаются не с [1] — нумерация будет скорректирована.
-    - Повторяющиеся ссылки (по точному тексту) объединяются с сохранением одного номера.
-    """)
-
-    #########################################
-    # Форма добавления / редактирования фрагмента
-    #########################################
-    with st.form(key="fragment_form", clear_on_submit=True):
-        default_text = ""
-        default_refs = ""
+    with st.form('fragment_form', clear_on_submit=True):
+        default_text = ''
+        default_refs = ''
         if st.session_state.edit_index is not None:
-            frag = st.session_state[f"{user_id}_fragments"][st.session_state.edit_index]
-            default_text = frag["text"]
-            if isinstance(frag.get("refs"), dict):
-                default_refs = "\n\n".join(f"{k}. {v}" for k, v in frag["refs"].items())
-            elif isinstance(frag.get("refs"), list):
-                default_refs = "\n\n".join(f"{i+1}. {r}" for i, r in enumerate(frag["refs"]))
-        new_text_input = st.text_area("Текст с локальной нумерацией (пример: [1], [2]...)", 
-                                      value=default_text, height=200)
-        new_refs_input = st.text_area("Список литературы к этому фрагменту", 
-                                      value=default_refs, height=200)
-        submitted = st.form_submit_button("💾 Сохранить фрагмент")
+            frag = st.session_state[f"{uid}_fragments"][st.session_state.edit_index]
+            default_text = frag['text']
+            default_refs = '\n'.join(f"{num}. {txt}" for num, txt in frag['refs'].items())
+        txt = st.text_area('Текст с [1]', value=default_text, height=200)
+        refs = st.text_area('Список литературы', value=default_refs, height=200)
+        if st.form_submit_button('💾 Сохранить фрагмент'):
+            parsed = parse_references(refs)
+            new_frag = {'text': txt, 'refs': parsed}
+            if st.session_state.edit_index is not None:
+                st.session_state[f"{uid}_fragments"][st.session_state.edit_index] = new_frag
+                st.session_state.edit_index = None
+            else:
+                st.session_state[f"{uid}_fragments"].append(new_frag)
+            update_autosave(uid)
+            st.experimental_rerun()
 
-    if submitted and new_text_input.strip() and new_refs_input.strip():
-        cleaned_refs = parse_references(new_refs_input.strip())
-        fragment = {
-            "text": new_text_input.strip(),
-            "refs": cleaned_refs
-        }
-        if st.session_state.edit_index is not None:
-            st.session_state[f"{user_id}_fragments"][st.session_state.edit_index] = fragment
-            st.session_state.edit_index = None
-        else:
-            st.session_state[f"{user_id}_fragments"].append(fragment)
-        update_autosave()
-    #########################################
-    # Объединение фрагментов и формирование итогового текста и списка литературы
-    #########################################
-    if st.button("📄 Объединить всё", key="combine_center"):
-        new_text = ""
-        new_refs = []
-        global_ref_map = {}
-        current_index = [st.session_state.get("start_index", 1)]
-        all_issues = []
+    if st.button('📄 Объединить всё'):
+        text_out = ''
+        global_map = {}
+        counter = [st.session_state.get(f"{uid}_start_index...
+```
+    if st.button('📄 Объединить всё'):
+        # объединяем текст и переиндексируем ссылки
+        text_out = ""
+        global_map = {}
+        counter = [st.session_state.get(f"{uid}_start_index", 1)]
+        issues = []
 
-        for frag_idx, frag in enumerate(st.session_state[f"{user_id}_fragments"]):
-            cited_numbers = set(int(n) for n in re.findall(r"\[(\d+)\]", frag["text"]))
-            # Приведение ключей к int (если str)
-            available_numbers = set(int(k) for k in frag["refs"].keys())
-
-            missing = sorted(cited_numbers - available_numbers)
-            extra = sorted(available_numbers - cited_numbers)
-
+        for idx, frag in enumerate(st.session_state[f"{uid}_fragments"]):
+            # проверяем ссылки в тексте vs список литературы
+            cited = set(int(n) for n in re.findall(CITE_REGEX, frag['text']))
+            available = set(int(n) for n in frag['refs'].keys())
+            missing = sorted(cited - available)
+            extra = sorted(available - cited)
             if missing:
-                all_issues.append(f"⚠️ Фрагмент {frag_idx+1}: ссылки в тексте, которых нет в списке — {missing}")
+                issues.append(f"Фрагмент {idx+1}: ссылки {missing} нет в списке.")
+            # заменяем локальные номера на глобальные
+            processed, global_map, counter = process_fragment(frag, global_map, counter)
+            text_out += processed + "\n\n"
 
-            frag_text, global_ref_map, current_index = process_fragment(frag, global_ref_map, current_index)
-            frag_text = re.sub(r"\[\?\?\]", ":red[??]", frag_text)
-            new_text += frag_text + "\n\n"
+        if issues:
+            st.warning("Обнаружены несоответствия:")
+            for msg in issues:
+                st.markdown(f"- {msg}")
 
-        if all_issues:
-            st.warning("🚨 Обнаружены проблемы при объединении:")
-            for issue in all_issues:
-                st.markdown(issue)
+        # формируем итоговый список литературы
+        refs_sorted = sorted(global_map.items(), key=lambda x: x[1])
+        refs_out = [f"[{num}] {txt}" for txt, num in refs_sorted]
 
-        sorted_refs = sorted(global_ref_map.items(), key=lambda x: x[1])
-        for ref_text, ref_num in sorted_refs:
-            new_refs.append(f"[{ref_num}] {ref_text}")
+        # сохраняем в сессию
+        st.session_state[f"{uid}_final_text"] = text_out
+        st.session_state[f"{uid}_final_refs"] = refs_out
+        update_autosave(uid)
 
-        st.session_state[f"{user_id}_final_text"] = new_text
-        st.session_state[f"{user_id}_final_refs"] = new_refs
-        st.session_state[f"{user_id}_ref_map"] = global_ref_map
-        st.session_state[f"{user_id}_ref_counter"] = current_index[0]
-        update_autosave()
+        # выводим результат
+        st.subheader("Результат объединения")
+        st.code(text_out, language="markdown")
+        st.subheader("Список литературы")
+        for r in refs_out:
+            st.markdown(r)
 
-        st.subheader("📄 Объединённый текст")
-        st.code(new_text, language="markdown")
-        st.subheader("📚 Общий список литературы")
-        for ref in new_refs:
-            st.markdown(ref)
-        st.success("Фрагменты объединены с учётом повторяющихся ссылок")
-        for ref in new_refs:
-            st.markdown(ref)
-        st.success("Фрагменты объединены с учётом повторяющихся ссылок")
-
+    # экспорт в DOCX
+    if st.session_state.get(f"{uid}_final_text"):
+        if st.button('📥 Скачать DOCX файл'):
+            doc = generate_docx(
+                st.session_state[f"{uid}_final_text"],
+                st.session_state[f"{uid}_final_refs"]
+            )
+            buf = BytesIO()
+            doc.save(buf)
+            buf.seek(0)
+            st.download_button(
+                label="Скачать DOCX",
+                data=buf,
+                file_name="merged_references.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
 if __name__ == "__main__":
     main()
