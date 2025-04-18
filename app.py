@@ -333,11 +333,11 @@ def generate_docx(text, references):
     return doc
 
 def main():
-    st.sidebar.title("🧙 Оформление ссылок")
+        st.sidebar.title("🧙 Оформление ссылок")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
     init_session_state(user_id)
     restore_autosave(user_id)
-    
+
     # Автоматическая загрузка последнего проекта
     if "last_opened_project" in st.session_state:
         last_proj = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
@@ -351,7 +351,7 @@ def main():
             st.session_state.restored = True
 
 
-    
+
     #########################################
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
     #########################################
@@ -391,17 +391,17 @@ def main():
                     if delete_button:
                         st.session_state[f"{user_id}_fragments"].pop(idx)
                         st.rerun()
-                     
+
     #########################################
     # Вывод итогового результата и экспорт в DOCX
     #########################################
     if st.session_state[f"{user_id}_final_text"]:
         st.markdown("---")
         st.code(st.session_state[f"{user_id}_final_text"].strip(), language="markdown")
-    
+
         for ref in st.session_state[f"{user_id}_final_refs"]:
             st.markdown(ref)
-    
+
         if st.button("📥 Скачать DOCX", key="download_docx"):
             doc = Document()
             style = doc.styles["Normal"]
@@ -410,19 +410,19 @@ def main():
             font.size = Pt(14)
             rFonts = style.element.rPr.rFonts
             rFonts.set(qn("w:eastAsia"), "Times New Roman")
-    
+
             doc.add_paragraph("Текст обзора:")
             for paragraph in st.session_state[f"{user_id}_final_text"].strip().split("\n"):
                 doc.add_paragraph(paragraph)
-    
+
             doc.add_paragraph("\nСписок литературы:")
             for ref in st.session_state[f"{user_id}_final_refs"]:
                 doc.add_paragraph(ref)
-    
+
             buffer = BytesIO()
             doc.save(buffer)
             buffer.seek(0)
-    
+
             st.download_button(
                 label="📥 Скачать DOCX файл",
                 data=buffer,
@@ -447,7 +447,7 @@ def main():
             file_name="citations.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-                        
+
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
     st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
@@ -501,7 +501,7 @@ if "gost_autoload_data" in st.session_state:
     else:
         project_name = st.sidebar.text_input("Или ввести название проекта вручную", value="default")
         project_path = os.path.join(PROJECT_DIR, f"{project_name}.json")
-    
+
     # Кнопки сохранения, загрузки, удаления, импорта и экспорта проекта
     if st.sidebar.button("💾 Сохранить проект"):
         data_to_save = {
@@ -513,7 +513,7 @@ if "gost_autoload_data" in st.session_state:
         }
         save_project(project_path, data_to_save)
         st.sidebar.success(f"Проект '{project_name}' сохранён")
-    
+
     if st.sidebar.button("📂 Загрузить проект"):
         if os.path.exists(project_path):
             data = load_project(project_path)
@@ -525,14 +525,14 @@ if "gost_autoload_data" in st.session_state:
             st.sidebar.success(f"Проект '{project_name}' загружен")
         else:
             st.sidebar.error("Файл проекта не найден")
-    
+
     if st.sidebar.button("🗑 Удалить проект"):
         if os.path.exists(project_path):
             os.remove(project_path)
             st.sidebar.success(f"Проект '{project_name}' удалён")
         else:
             st.sidebar.error("Такого проекта нет в папке")
-    
+
     uploaded_file = st.sidebar.file_uploader("📥 Импорт из файла (.json)", type="json")
     if uploaded_file is not None:
         try:
@@ -545,7 +545,7 @@ if "gost_autoload_data" in st.session_state:
             st.sidebar.success("Проект импортирован из файла")
         except Exception as e:
             st.sidebar.error(f"Ошибка при импорте: {e}")
-    
+
     if st.sidebar.button("📤 Экспорт в файл"):
         export_data = json.dumps({
             "fragments": st.session_state.get("fragments", []),
@@ -560,12 +560,12 @@ if "gost_autoload_data" in st.session_state:
             file_name=f"{project_name}.json",
             mime="application/json"
         )
-    
+
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Настройки")
     st.session_state.start_index = st.sidebar.number_input("Начальный номер глобальной нумерации", min_value=1, value=1)
     st.sidebar.markdown("---")
-    
+
     # Автовосстановление последнего проекта
     if "last_opened_project" in st.session_state and st.session_state["last_opened_project"].endswith(".json"):
         default_project = os.path.join(PROJECT_DIR, st.session_state["last_opened_project"])
@@ -577,7 +577,7 @@ if "gost_autoload_data" in st.session_state:
             st.session_state.final_text = data.get("final_text", "")
             st.session_state.final_refs = data.get("final_refs", [])
             st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
-    
+
     # Инструкция для пользователя
     st.markdown("""
     #### 📌 Инструкция:
@@ -586,7 +586,7 @@ if "gost_autoload_data" in st.session_state:
     - Поддерживаются фрагменты, где ссылки начинаются не с [1] — нумерация будет скорректирована.
     - Повторяющиеся ссылки (по точному тексту) объединяются с сохранением одного номера.
     """)
-    
+
     #########################################
     # Форма добавления / редактирования фрагмента
     #########################################
@@ -605,7 +605,7 @@ if "gost_autoload_data" in st.session_state:
         new_refs_input = st.text_area("Список литературы к этому фрагменту", 
                                       value=default_refs, height=200)
         submitted = st.form_submit_button("💾 Сохранить фрагмент")
-    
+
     if submitted and new_text_input.strip() and new_refs_input.strip():
         cleaned_refs = parse_references(new_refs_input.strip())
         fragment = {
@@ -667,7 +667,7 @@ if "gost_autoload_data" in st.session_state:
         for ref in new_refs:
             st.markdown(ref)
         st.success("Фрагменты объединены с учётом повторяющихся ссылок")
-    
+
 
 if __name__ == "__main__":
     main()
