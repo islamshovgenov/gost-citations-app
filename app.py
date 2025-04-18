@@ -353,7 +353,6 @@ def main():
             st.session_state.restored = True
 
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
-    
     init_session_state(user_id)
     restore_autosave(user_id)
 
@@ -406,7 +405,7 @@ if "gost_autoload_data" in st.session_state:
         project_name = chosen_file.replace(".json", "")
     else:
         project_name = st.sidebar.text_input("Или ввести название проекта вручную", value="default")
-    project_path = os.path.join(PROJECT_DIR, f"{project_name}.json")
+        project_path = os.path.join(PROJECT_DIR, f"{project_name}.json")
     
     # Кнопки сохранения, загрузки, удаления, импорта и экспорта проекта
     if st.sidebar.button("💾 Сохранить проект"):
