@@ -353,6 +353,9 @@ def main():
             st.session_state.restored = True
 
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
+    
+    init_session_state(user_id)
+
 
     local_data = load_from_localstorage_with_js_eval(user_id)
     if local_data:
@@ -391,8 +394,7 @@ if "gost_autoload_data" in st.session_state:
         st.info("ℹ️ LocalStorage пуст — нет данных для восстановления.")
     st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
-    # Инициализация состояния сессии
-    init_session_state(user_id)
+
 
     # Панель управления проектами
     st.sidebar.title("📁 Управление проектами")
