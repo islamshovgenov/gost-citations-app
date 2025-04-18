@@ -1,3 +1,47 @@
+
+import streamlit.components.v1 as components
+
+
+def inject_autoload_receiver(user_id):
+    import streamlit.components.v1 as components
+    js_code = f"""
+    <script>
+    window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "gost-autoload") {
+            const payload = event.data.payload;
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "gost_autoload_data";
+            input.value = JSON.stringify(payload);
+            document.forms[0].appendChild(input);
+            document.forms[0].dispatchEvent(new Event("submit"));
+        }
+    });
+    </script>
+    """
+    components.html(js_code, height=0)
+
+def autosave_to_localstorage(user_id, data):
+    import json
+    js_code = f"""
+    <script>
+    localStorage.setItem("autosave_" + {json.dumps(user_id)}, JSON.stringify({json.dumps(data)}));
+    </script>
+    """
+    components.html(js_code, height=0)
+
+def autoload_from_localstorage(user_id):
+    js_code = f"""
+    <script>
+    const data = localStorage.getItem("autosave_" + {json.dumps(user_id)});
+    if (data) {{
+        const parsed = JSON.parse(data);
+        window.parent.postMessage({{ type: "gost-autoload", payload: parsed }}, "*");
+    }}
+    </script>
+    """
+    components.html(js_code, height=0)
+
 import streamlit as st
 import os
 import json
@@ -64,14 +108,13 @@ def save_project(project_path: str, data: dict) -> None:
     except Exception as e:
         logging.error(f"Ошибка сохранения проекта: {e}")
 
-def autosave_project(data: dict, user_id: str) -> None:
-    """Автосохранение проекта в персональный файл."""
-    filename = f"autosave_{user_id}.json"
+def autosave_project(data: dict) -> None:
+    """Автосохранение проекта в локальный файл."""
     try:
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(AUTOSAVE_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logging.error(f"Ошибка автосохранения проекта для {user_id}: {e}")
+        logging.error(f"Ошибка автосохранения проекта: {e}")
 
 #########################################
 # Функция для разбора и очистки списка литературы с помощью spaCy (вариант 2)
@@ -232,12 +275,11 @@ def init_session_state(user_id):
     if 'start_index' not in st.session_state:
         st.session_state.start_index = 1
 
-def restore_autosave(user_id: str):
+def restore_autosave():
     if 'restored' not in st.session_state:
-        filename = f"autosave_{user_id}.json"
-        if os.path.exists(filename):
+        if os.path.exists(AUTOSAVE_FILE):
             try:
-                with open(filename, 'r', encoding='utf-8') as f:
+                with open(AUTOSAVE_FILE, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     st.session_state[f"{user_id}_fragments"] = data.get("fragments", [])
                     st.session_state[f"{user_id}_ref_map"] = data.get("ref_map", {})
@@ -249,7 +291,7 @@ def restore_autosave(user_id: str):
                 st.warning(f"Ошибка при восстановлении: {e}")
         st.session_state.restored = True
 
-def update_autosave(user_id: str):
+def update_autosave():
     data = {
         "fragments": st.session_state.get("fragments", []),
         "ref_map": st.session_state.get("ref_map", {}),
@@ -257,7 +299,7 @@ def update_autosave(user_id: str):
         "final_text": st.session_state.get("final_text", ""),
         "final_refs": st.session_state.get("final_refs", [])
     }
-    autosave_project(data, user_id)
+    autosave_project(data)
 
 #########################################
 # Основная функция приложения
@@ -294,6 +336,23 @@ def main():
             st.session_state.restored = True
         st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
+
+    autoload_from_localstorage(user_id)
+    inject_autoload_receiver(user_id)
+
+    # Обработка автозагруженных данных
+    if "gost_autoload_data" in st.session_state:
+        try:
+            payload = json.loads(st.session_state["gost_autoload_data"])
+            st.session_state[f"{user_id}_fragments"] = payload.get("fragments", [])
+            st.session_state[f"{user_id}_ref_map"] = payload.get("ref_map", {})
+            st.session_state[f"{user_id}_ref_counter"] = payload.get("ref_counter", 1)
+            st.session_state[f"{user_id}_final_text"] = payload.get("final_text", "")
+            st.session_state[f"{user_id}_final_refs"] = payload.get("final_refs", [])
+            st.session_state.restored = True
+            st.success("✅ Проект восстановлен из LocalStorage!")
+        except Exception as e:
+            st.warning(f"Ошибка загрузки из LocalStorage: {e}")
     st.title("Автоматическое объединение ссылок и списка литературы (ГОСТ)")
 
     # Инициализация состояния сессии
@@ -387,7 +446,7 @@ def main():
             st.success(f"Проект {st.session_state['last_opened_project']} автоматически восстановлен")
 
     # Восстановление автосохранения
-    restore_autosave(user_id)
+    restore_autosave()
     
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
@@ -432,7 +491,7 @@ def main():
             st.session_state.edit_index = None
         else:
             st.session_state[f"{user_id}_fragments"].append(fragment)
-        update_autosave(user_id)
+        update_autosave()
     #########################################
     # Просмотр добавленных фрагментов с возможностью редактирования и удаления
     #########################################
@@ -510,7 +569,7 @@ def main():
         st.session_state[f"{user_id}_final_refs"] = new_refs
         st.session_state[f"{user_id}_ref_map"] = global_ref_map
         st.session_state[f"{user_id}_ref_counter"] = current_index[0]
-        update_autosave(user_id)
+        update_autosave()
 
         st.subheader("📄 Объединённый текст")
         st.code(new_text, language="markdown")
