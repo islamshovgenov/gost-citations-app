@@ -444,7 +444,7 @@ def main():
             buffer,
             file_name="citations.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-
+)
     # Статистика по проекту
     st.sidebar.markdown(f"**Фрагментов:** {len(st.session_state[f"{user_id}_fragments"])}")
     st.sidebar.markdown(f"**Итоговых ссылок:** {len(st.session_state[f"{user_id}_final_refs"])}")
