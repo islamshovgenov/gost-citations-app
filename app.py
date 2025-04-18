@@ -62,8 +62,6 @@ import os
 import json
 import requests
 
-st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
-
 
 # Проверка наличия секретов
 
@@ -84,6 +82,8 @@ from docx import Document
 from docx.shared import Pt
 from docx.oxml.ns import qn
 from io import BytesIO
+
+st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
 
 # spaCy временно отключён
 nlp = None
