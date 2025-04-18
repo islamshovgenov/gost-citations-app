@@ -42,6 +42,14 @@ def autoload_from_localstorage(user_id):
     """
     components.html(js_code, height=0)
 
+
+from streamlit_js_eval import streamlit_js_eval
+
+def load_from_localstorage_with_js_eval(user_id):
+    key = f"autosave_{user_id}"
+    result = streamlit_js_eval(js_expressions=f"localStorage.getItem('{key}')", key="read_localstorage")
+    return result
+
 import streamlit as st
 import os
 import json
@@ -336,6 +344,20 @@ def main():
             st.session_state.restored = True
         st.set_page_config(page_title="Объединение ссылок по ГОСТ", layout="wide")
     user_id = st.sidebar.text_input("🧙 Ваше имя, мудрейший из оформителей ГОСТа", value="Безымянный")
+
+    local_data = load_from_localstorage_with_js_eval(user_id)
+    if local_data:
+        try:
+            payload = json.loads(local_data)
+            st.session_state[f"{user_id}_fragments"] = payload.get("fragments", [])
+            st.session_state[f"{user_id}_ref_map"] = payload.get("ref_map", {})
+            st.session_state[f"{user_id}_ref_counter"] = payload.get("ref_counter", 1)
+            st.session_state[f"{user_id}_final_text"] = payload.get("final_text", "")
+            st.session_state[f"{user_id}_final_refs"] = payload.get("final_refs", [])
+            st.session_state.restored = True
+            st.success("✅ Проект восстановлен из LocalStorage (через JS Eval)")
+        except Exception as e:
+            st.warning(f"Ошибка парсинга автосохранения: {e}")
 
     autoload_from_localstorage(user_id)
     inject_autoload_receiver(user_id)
