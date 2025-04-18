@@ -466,7 +466,9 @@ def main():
         except Exception as e:
             st.warning(f"Ошибка парсинга автосохранения: {e}")
 
-    autoload_from_localstorage(user_id)
+    )
+
+autoload_from_localstorage(user_id)
     inject_autoload_receiver(user_id)
     st.text_input("hidden_autoload_input", value="", key="gost_autoload_data", label_visibility="collapsed")
 
@@ -670,4 +672,4 @@ if "gost_autoload_data" in st.session_state:
 
 
 if __name__ == "__main__":
-    main()
+    main(
