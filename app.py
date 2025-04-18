@@ -6,8 +6,8 @@ def inject_autoload_receiver(user_id):
     import streamlit.components.v1 as components
     js_code = f"""
     <script>
-    window.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "gost-autoload") {
+    window.addEventListener("message", (event) => {{
+        if (event.data && event.data.type === "gost-autoload") {{
             const payload = event.data.payload;
             const input = document.createElement("input");
             input.type = "hidden";
@@ -15,11 +15,12 @@ def inject_autoload_receiver(user_id):
             input.value = JSON.stringify(payload);
             document.forms[0].appendChild(input);
             document.forms[0].dispatchEvent(new Event("submit"));
-        }
-    });
+        }}
+    }});
     </script>
     """
     components.html(js_code, height=0)
+
 
 def autosave_to_localstorage(user_id, data):
     import json
@@ -29,6 +30,7 @@ def autosave_to_localstorage(user_id, data):
     </script>
     """
     components.html(js_code, height=0)
+
 
 def autoload_from_localstorage(user_id):
     js_code = f"""
@@ -41,6 +43,7 @@ def autoload_from_localstorage(user_id):
     </script>
     """
     components.html(js_code, height=0)
+
 
 
 from streamlit_js_eval import streamlit_js_eval
