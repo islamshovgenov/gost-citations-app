@@ -177,86 +177,6 @@ def process_fragment(frag: dict, global_ref_map: dict, current_index: list) -> t
 
     def clean_reference(text):
         return re.sub(r'^\[\d+\]\s*', '', text).strip()
-
-    def find_existing_ref(new_ref_text):
-        for known_text in global_ref_map:
-            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
-                return known_text
-        return None
-
-    def replace_cite(match):
-        raw_num = int(match.group(1))
-        if raw_num < 1 or raw_num > len(refs_list):
-            return '[??]'
-        raw_ref_text = refs_list[raw_num - 1]
-        ref_text = clean_reference(raw_ref_text)
-
-        existing_ref = find_existing_ref(ref_text)
-        if existing_ref:
-            ref_text = existing_ref
-        else:
-            global_ref_map[ref_text] = current_index[0]
-            current_index[0] += 1
-
-        return f'[{global_ref_map[ref_text]}]'
-
-    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
-    return frag_text, global_ref_map, current_index
-    def find_existing_ref(new_ref_text):
-        for known_text in global_ref_map:
-            if fuzz.ratio(known_text.lower(), new_ref_text.lower()) >= threshold:
-                return known_text
-        return None
-
-    def replace_cite(match: re.Match) -> str:
-        nonlocal new_id
-        raw_num = int(match.group(1))
-        if raw_num < 1 or raw_num > len(refs_list):
-            logging.warning('Оригинальный номер ссылки не найден в списке литературы')
-            return '[??]'
-        ref_text = refs_list[raw_num - 1]
-
-        if ref_text in local_text_map:
-            local_num = local_text_map[ref_text]
-        else:
-            local_text_map[ref_text] = new_id
-            local_num = new_id
-            new_id += 1
-
-        existing_ref = find_existing_ref(ref_text)
-        if existing_ref:
-            ref_text = existing_ref
-        else:
-            global_ref_map[ref_text] = current_index[0]
-            current_index[0] += 1
-
-        return f'[{global_ref_map[ref_text]}]'
-
-    frag_text = re.sub(r'\[(\d+)\]', replace_cite, frag['text'])
-    return frag_text, global_ref_map, current_index
-    def replace_cite(match: re.Match) -> str:
-        nonlocal new_id
-        raw_num = int(match.group(1))
-        # Проверяем, что номер есть в диапазоне ссылок (нумерация в списке начинается с 1)
-        if raw_num < 1 or raw_num > len(local_refs):
-            logging.warning("Оригинальный номер ссылки не найден в списке литературы")
-            return "[??]"
-        ref_text = local_refs[raw_num - 1]
-        # Если ссылка уже встречалась в этом фрагменте, используем её локальный номер
-        if ref_text in local_text_map:
-            local_num = local_text_map[ref_text]
-        else:
-            local_text_map[ref_text] = new_id
-            local_num = new_id
-            new_id += 1
-        # В глобальной карте, если ссылка новая, присваиваем ей глобальный номер
-        if ref_text not in global_ref_map:
-            global_ref_map[ref_text] = current_index[0]
-            current_index[0] += 1
-        return f"[{global_ref_map[ref_text]}]"
-
-    frag_text = re.sub(r"\[(\d+)\]", replace_cite, frag["text"])
-    return frag_text, global_ref_map, current_index
 #########################################
 # Инициализация переменных сессии
 #########################################
@@ -558,7 +478,7 @@ if "gost_autoload_data" in st.session_state:
             export_data,
             file_name=f"{project_name}.json",
             mime="application/json"
-
+        )
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Настройки")
     st.session_state.start_index = st.sidebar.number_input("Начальный номер глобальной нумерации", min_value=1, value=1)
